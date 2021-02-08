@@ -6,3 +6,5 @@ config SYS_VENDOR
 
 config SYS_CONFIG_NAME
 	default "dr-imx8mm-evk"
+
+source "board/datarespons/common/Kconfig"
