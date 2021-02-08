@@ -1,0 +1,10 @@
+config SYS_BOARD
+	default "dr-imx8mm-evk"
+
+config SYS_VENDOR
+	default "datarespons"
+
+config SYS_CONFIG_NAME
+	default "dr-imx8mm-evk"
+
+source "board/freescale/common/Kconfig"
