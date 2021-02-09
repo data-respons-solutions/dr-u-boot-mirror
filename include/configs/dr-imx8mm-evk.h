@@ -73,10 +73,37 @@
 #define MFG_NAND_PARTITION "mtdparts=gpmi-nand:64m(nandboot),16m(nandfit),32m(nandkernel),16m(nanddtb),8m(nandtee),-(nandrootfs)"
 #endif
 
+/* disable nxp imx8 shenanigans */
+#undef is_boot_from_usb
+
+/* boot configuration */
+#define DEFAULT_USB_DEV "0"
+#define DEFAULT_USB_PART "1"
+#define DEFAULT_MMC_DEV "1"
+#define DEFAULT_MMC_PART "1"
+#define DEFAULT_ZIMAGE "/boot/Image"
+#define DEFAULT_INITRD "/boot/initrd"
+#define DEFAULT_INITRD_ADDR "0x43800000"
+#define DEFAULT_FDT "/boot/imx8mm-evk.dtb"
+#define DEFAULT_FDT_ADDR "0x43000000"
+#define DEFAULT_LOGLEVEL "6"
+#define DEFAULT_CONSOLEBLANK "0"
+
+#include "../../board/datarespons/common/include/configs/datarespons.h"
+
+#define CONFIG_EXTRA_ENV_SETTINGS \
+	DATARESPONS_BOOT_SCRIPTS
+
+#define CONFIG_BOOTCOMMAND \
+	"echo starting boot procedure...;" \
+	"run bootmmc;" \
+	"echo no boot device found;"
+
 /*
  * Another approach is add the clocks for inmates into clks_init_on
  * in clk-imx8mm.c, then clk_ingore_unused could be removed.
  */
+/*
 #define JAILHOUSE_ENV \
 	"jh_clk= \0 " \
 	"jh_mmcboot=mw 0x303d0518 0xff; setenv fdt_file imx8mm-evk-root.dtb;" \
@@ -86,15 +113,17 @@
 			   "else run jh_netboot; fi; \0" \
 	"jh_netboot=mw 0x303d0518 0xff; setenv fdt_file imx8mm-evk-root.dtb; setenv jh_clk clk_ignore_unused; run netboot; \0 "
 
-
+*/
+/*
 #define CONFIG_MFG_ENV_SETTINGS \
 	CONFIG_MFG_ENV_SETTINGS_DEFAULT \
 	"initrd_addr=0x43800000\0" \
 	"initrd_high=0xffffffffffffffff\0" \
 	"emmc_dev=2\0"\
 	"sd_dev=1\0" \
-
+*/
 /* Initial environment variables */
+/*
 #if defined(CONFIG_NAND_BOOT)
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	CONFIG_MFG_ENV_SETTINGS \
@@ -179,6 +208,7 @@
 		   "fi; " \
 	   "fi;"
 #endif
+*/
 
 /* Link Definitions */
 #define CONFIG_LOADADDR			0x40480000
