@@ -134,11 +134,6 @@ int board_init(void)
 	return 0;
 }
 
-int board_late_init(void)
-{
-	return 0;
-}
-
 #ifdef CONFIG_FSL_FASTBOOT
 #ifdef CONFIG_ANDROID_RECOVERY
 int is_recovery_key_pressing(void)

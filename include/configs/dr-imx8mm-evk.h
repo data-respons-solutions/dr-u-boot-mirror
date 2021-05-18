@@ -16,6 +16,7 @@
 #define CONFIG_SYS_MMCSD_FS_BOOT_PARTITION	1
 #define CONFIG_SYS_UBOOT_BASE	\
 	(QSPI0_AMBA_BASE + CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_SECTOR * 512)
+#define CONFIG_SYS_BOOTM_LEN (1024 * 1024 * 512)
 
 #ifdef CONFIG_SPL_BUILD
 #define CONFIG_SPL_STACK		0x920000
@@ -61,15 +62,11 @@
 /* boot configuration */
 #define DEFAULT_USB_DEV "0"
 #define DEFAULT_USB_PART "1"
-#define DEFAULT_MMC_DEV "1"
-#define DEFAULT_MMC_PART "1"
-#define DEFAULT_ZIMAGE "/boot/Image"
-#define DEFAULT_INITRD "/boot/initrd"
-#define DEFAULT_INITRD_ADDR "0x43800000"
-#define DEFAULT_FDT "/boot/imx8mm-evk.dtb"
-#define DEFAULT_FDT_ADDR "0x43000000"
-#define DEFAULT_LOGLEVEL "6"
-#define DEFAULT_CONSOLEBLANK "0"
+
+#define SYS_BOOT_IFACE "mmc"
+#define SYS_BOOT_DEV 2
+
+#define FIT_ADDR "0x43200000"
 
 #include "../../board/datarespons/common/include/configs/datarespons.h"
 
@@ -78,7 +75,8 @@
 
 #define CONFIG_BOOTCOMMAND \
 	"echo starting boot procedure...;" \
-	"run bootmmc;" \
+	"run bootpreloaded;" \
+	"run bootsys;" \
 	"echo no boot device found;"
 
 /* Link Definitions */
