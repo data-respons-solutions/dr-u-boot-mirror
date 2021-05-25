@@ -1,0 +1,10 @@
+config SYS_BOARD
+	default "sdb8000"
+
+config SYS_VENDOR
+	default "datarespons"
+
+config SYS_CONFIG_NAME
+	default "sdb8000"
+
+source "board/datarespons/common/Kconfig"
