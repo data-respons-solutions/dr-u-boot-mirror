@@ -27,16 +27,11 @@ DECLARE_GLOBAL_DATA_PTR;
 int spl_board_boot_device(enum boot_device boot_dev_spl)
 {
 	switch (boot_dev_spl) {
-	case SD2_BOOT:
-	case MMC2_BOOT:
-		return BOOT_DEVICE_MMC1;
 	case SD3_BOOT:
 	case MMC3_BOOT:
 		return BOOT_DEVICE_MMC2;
-	case QSPI_BOOT:
-		return BOOT_DEVICE_NOR;
-	case NAND_BOOT:
-		return BOOT_DEVICE_NAND;
+	case SPI_NOR_BOOT:
+		return BOOT_TYPE_SPINOR;
 	case USB_BOOT:
 		return BOOT_DEVICE_BOARD;
 	default:
@@ -64,12 +59,8 @@ struct i2c_pads_info i2c_pad_info1 = {
 	},
 };
 
-#define USDHC2_CD_GPIO	IMX_GPIO_NR(2, 18)
-#define USDHC2_PWR_GPIO IMX_GPIO_NR(2, 19)
-
 #define USDHC_PAD_CTRL	(PAD_CTL_DSE6 | PAD_CTL_HYS | PAD_CTL_PUE |PAD_CTL_PE | \
 			 PAD_CTL_FSEL2)
-#define USDHC_GPIO_PAD_CTRL (PAD_CTL_HYS | PAD_CTL_DSE1)
 
 static iomux_v3_cfg_t const usdhc3_pads[] = {
 	IMX8MM_PAD_NAND_WE_B_USDHC3_CLK | MUX_PAD_CTRL(USDHC_PAD_CTRL),
@@ -84,99 +75,29 @@ static iomux_v3_cfg_t const usdhc3_pads[] = {
 	IMX8MM_PAD_NAND_CLE_USDHC3_DATA7 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
 };
 
-static iomux_v3_cfg_t const usdhc2_pads[] = {
-	IMX8MM_PAD_SD2_CLK_USDHC2_CLK | MUX_PAD_CTRL(USDHC_PAD_CTRL),
-	IMX8MM_PAD_SD2_CMD_USDHC2_CMD | MUX_PAD_CTRL(USDHC_PAD_CTRL),
-	IMX8MM_PAD_SD2_DATA0_USDHC2_DATA0 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
-	IMX8MM_PAD_SD2_DATA1_USDHC2_DATA1 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
-	IMX8MM_PAD_SD2_DATA2_USDHC2_DATA2 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
-	IMX8MM_PAD_SD2_DATA3_USDHC2_DATA3 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
-	IMX8MM_PAD_SD2_RESET_B_GPIO2_IO19 | MUX_PAD_CTRL(USDHC_GPIO_PAD_CTRL),
-};
-
-/*
- * The evk board uses DAT3 to detect CD card plugin,
- * in u-boot we mux the pin to GPIO when doing board_mmc_getcd.
- */
-static iomux_v3_cfg_t const usdhc2_cd_pad =
-	IMX8MM_PAD_SD2_DATA3_GPIO2_IO18 | MUX_PAD_CTRL(USDHC_GPIO_PAD_CTRL);
-
-static iomux_v3_cfg_t const usdhc2_dat3_pad =
-	IMX8MM_PAD_SD2_DATA3_USDHC2_DATA3 |
-	MUX_PAD_CTRL(USDHC_PAD_CTRL);
-
-
-static struct fsl_esdhc_cfg usdhc_cfg[2] = {
-	{USDHC2_BASE_ADDR, 0, 4},
-	{USDHC3_BASE_ADDR, 0, 8},
-};
-
 int board_mmc_init(bd_t *bis)
 {
-	int i, ret;
-	/*
-	 * According to the board_mmc_init() the following map is done:
-	 * (U-Boot device node)    (Physical Port)
-	 * mmc0                    USDHC1
-	 * mmc1                    USDHC2
-	 */
-	for (i = 0; i < CONFIG_SYS_FSL_USDHC_NUM; i++) {
-		switch (i) {
-		case 0:
-			init_clk_usdhc(1);
-			usdhc_cfg[0].sdhc_clk = mxc_get_clock(MXC_ESDHC2_CLK);
-			imx_iomux_v3_setup_multiple_pads(
-				usdhc2_pads, ARRAY_SIZE(usdhc2_pads));
-			gpio_request(USDHC2_PWR_GPIO, "usdhc2_reset");
-			gpio_direction_output(USDHC2_PWR_GPIO, 0);
-			udelay(500);
-			gpio_direction_output(USDHC2_PWR_GPIO, 1);
-			break;
-		case 1:
-			init_clk_usdhc(2);
-			usdhc_cfg[1].sdhc_clk = mxc_get_clock(MXC_ESDHC3_CLK);
-			imx_iomux_v3_setup_multiple_pads(
-				usdhc3_pads, ARRAY_SIZE(usdhc3_pads));
-			break;
-		default:
-			printf("Warning: you configured more USDHC controllers"
-				"(%d) than supported by the board\n", i + 1);
-			return -EINVAL;
-		}
-
-		ret = fsl_esdhc_initialize(bis, &usdhc_cfg[i]);
-		if (ret)
-			return ret;
-	}
+	struct fsl_esdhc_cfg usdhc_cfg = {USDHC3_BASE_ADDR, 0, 8};
+	init_clk_usdhc(2);
+	usdhc_cfg.sdhc_clk = mxc_get_clock(MXC_ESDHC3_CLK);
+	imx_iomux_v3_setup_multiple_pads(usdhc3_pads, ARRAY_SIZE(usdhc3_pads));
+	int r = fsl_esdhc_initialize(bis, &usdhc_cfg);
+	if (r)
+		return r;
 
 	return 0;
 }
 
 int board_mmc_getcd(struct mmc *mmc)
 {
-	struct fsl_esdhc_cfg *cfg = (struct fsl_esdhc_cfg *)mmc->priv;
-	int ret = 0;
+	const struct fsl_esdhc_cfg *cfg = (struct fsl_esdhc_cfg *)mmc->priv;
 
 	switch (cfg->esdhc_base) {
 	case USDHC3_BASE_ADDR:
-		ret = 1;
-		break;
-	case USDHC2_BASE_ADDR:
-		imx_iomux_v3_setup_pad(usdhc2_cd_pad);
-		gpio_request(USDHC2_CD_GPIO, "usdhc2 cd");
-		gpio_direction_input(USDHC2_CD_GPIO);
-
-		/*
-		 * Since it is the DAT3 pin, this pin is pulled to
-		 * low voltage if no card
-		 */
-		ret = gpio_get_value(USDHC2_CD_GPIO);
-
-		imx_iomux_v3_setup_pad(usdhc2_dat3_pad);
-		return ret;
+		return 1;
+	default:
+		return 0;
 	}
-
-	return 1;
 }
 
 #ifdef CONFIG_POWER

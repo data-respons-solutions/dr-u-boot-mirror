@@ -1,6 +1,13 @@
 // SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 /*
- * Copyright 2019 NXP
+ * Copyright 2021 Data Respons Solutions AB
+ */
+
+/*
+ * FIXME:
+ * - SD3 reset
+ * - ENET PHY: INT and RST
+ * - Flash: WP_Flash
  */
 
 /dts-v1/;
@@ -12,12 +19,25 @@
 	compatible = "drs,sdb8000", "fsl,imx8mm";
 
 	chosen {
-		stdout-path = &uart2;
+		stdout-path = &uart3;
 	};
 
 	dsi_host: dsi-host {
 		compatible = "samsung,sec-mipi-dsi";
 		status = "okay";
+	};
+
+	reg_usb_otg1: regulator-usb-otg1 {
+		compatible = "regulator-fixed";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_reg_usb_otg1>;
+		regulator-name = "USB_OTG1_5V";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = <&gpio3 21 GPIO_ACTIVE_HIGH>;
+		off-on-delay-us = <20000>;
+		enable-active-high;
+		regulator-always-on;
 	};
 };
 
@@ -160,55 +180,79 @@
 	};
 };
 
-&i2c2 {
-	clock-frequency = <400000>;
-	pinctrl-names = "default", "gpio";
-	pinctrl-0 = <&pinctrl_i2c2>;
-	pinctrl-1 = <&pinctrl_i2c2_gpio>;
-	scl-gpios = <&gpio5 16 GPIO_ACTIVE_HIGH>;
-	sda-gpios = <&gpio5 17 GPIO_ACTIVE_HIGH>;
+&ecspi1 {
+	cs-gpios = <&gpio5 9 GPIO_ACTIVE_LOW>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&pinctrl_ecspi1>;
 	status = "okay";
 
-	adv_bridge: adv7535@3d {
-		compatible = "adi,adv7533";
-		reg = <0x3d>;
-		adi,addr-cec = <0x3c>;
-		adi,dsi-lanes = <4>;
-		status = "okay";
+	flash0: mx25l3233fm2i-08g@0 {
+		reg = <0>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+		compatible = "jedec,spi-nor";
+		spi-max-frequency = <50000000>;
 
-		port {
-			adv7535_from_dsim: endpoint {
-				remote-endpoint = <&dsim_to_adv7535>;
+		partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			spl@0 {
+				label = "spl";
+				reg = <0x000000 0x040000>;
+			};
+
+			platform@40000 {
+				label = "platform";
+				reg = <0x040000 0x010000>;
+				read-only;
+			};
+
+			u-boot@50000 {
+				label = "u-boot";
+				reg = <0x050000 0x1A0000>;
+			};
+
+			u-boot-second@1F0000 {
+				label = "u-boot-second";
+				reg = <0x1F0000 0x1A0000>;
+			};
+
+			system_a@390000 {
+				label = "system_a";
+				reg = <0x390000 0x010000>;
+			};
+
+			system_b@3A0000 {
+				label = "system_b";
+				reg = <0x3A0000 0x010000>;
+			};
+
+			user_a@3B0000 {
+				label = "user_a";
+				reg = <0x3B0000 0x010000>;
+			};
+
+			user_b@3C0000 {
+				label = "user_b";
+				reg = <0x3C0000 0x010000>;
 			};
 		};
 	};
-};
-
-&i2c3 {
-	clock-frequency = <100000>;
-	pinctrl-names = "default", "gpio";
-	pinctrl-0 = <&pinctrl_i2c3>;
-	pinctrl-1 = <&pinctrl_i2c3_gpio>;
-	scl-gpios = <&gpio5 18 GPIO_ACTIVE_HIGH>;
-	sda-gpios = <&gpio5 19 GPIO_ACTIVE_HIGH>;
-	status = "okay";
 };
 
 &snvs_pwrkey {
 	status = "okay";
 };
 
-&uart2 { /* console */
+&uart3 {
 	pinctrl-names = "default";
-	pinctrl-0 = <&pinctrl_uart2>;
+	pinctrl-0 = <&pinctrl_uart3>;
 	status = "okay";
 };
 
 &usbotg1 {
-	status = "okay";
-};
-
-&usbotg2 {
 	status = "okay";
 };
 
@@ -229,23 +273,13 @@
 	status = "okay";
 };
 
-&mipi_dsi {
-	status = "okay";
-
-	port@1 {
-		dsim_to_adv7535: endpoint {
-			remote-endpoint = <&adv7535_from_dsim>;
-		};
-	};
-};
-
 &iomuxc {
 	pinctrl-names = "default";
 
 	pinctrl_fec1: fec1grp {
 		fsl,pins = <
-			MX8MM_IOMUXC_ENET_MDC_ENET1_MDC			0x3
-			MX8MM_IOMUXC_ENET_MDIO_ENET1_MDIO		0x3
+			MX8MM_IOMUXC_ENET_MDC_ENET1_MDC				0x3
+			MX8MM_IOMUXC_ENET_MDIO_ENET1_MDIO			0x3
 			MX8MM_IOMUXC_ENET_TD3_ENET1_RGMII_TD3		0x1f
 			MX8MM_IOMUXC_ENET_TD2_ENET1_RGMII_TD2		0x1f
 			MX8MM_IOMUXC_ENET_TD1_ENET1_RGMII_TD1		0x1f
@@ -258,7 +292,8 @@
 			MX8MM_IOMUXC_ENET_RXC_ENET1_RGMII_RXC		0x91
 			MX8MM_IOMUXC_ENET_RX_CTL_ENET1_RGMII_RX_CTL	0x91
 			MX8MM_IOMUXC_ENET_TX_CTL_ENET1_RGMII_TX_CTL	0x1f
-			MX8MM_IOMUXC_SAI2_RXC_GPIO4_IO22		0x19
+			MX8MM_IOMUXC_SAI1_RXFS_GPIO4_IO0			0x41	/* ENET_nINT */
+			MX8MM_IOMUXC_SAI1_RXC_GPIO4_IO1				0x41	/* ENET_nRST */
 		>;
 	};
 
@@ -269,38 +304,10 @@
 		>;
 	};
 
-	pinctrl_i2c2: i2c2grp {
-		fsl,pins = <
-			MX8MM_IOMUXC_I2C2_SCL_I2C2_SCL			0x400001c3
-			MX8MM_IOMUXC_I2C2_SDA_I2C2_SDA			0x400001c3
-		>;
-	};
-
-	pinctrl_i2c3: i2c3grp {
-		fsl,pins = <
-			MX8MM_IOMUXC_I2C3_SCL_I2C3_SCL			0x400001c3
-			MX8MM_IOMUXC_I2C3_SDA_I2C3_SDA			0x400001c3
-		>;
-	};
-
 	pinctrl_i2c1_gpio: i2c1grp-gpio {
 		fsl,pins = <
 			MX8MM_IOMUXC_I2C1_SCL_GPIO5_IO14        		0x1c3
 			MX8MM_IOMUXC_I2C1_SDA_GPIO5_IO15        	0x1c3
-		>;
-	};
-
-	pinctrl_i2c2_gpio: i2c2grp-gpio {
-		fsl,pins = <
-			MX8MM_IOMUXC_I2C2_SCL_GPIO5_IO16        		0x1c3
-			MX8MM_IOMUXC_I2C2_SDA_GPIO5_IO17        	0x1c3
-		>;
-	};
-
-	pinctrl_i2c3_gpio: i2c3grp-gpio {
-		fsl,pins = <
-			MX8MM_IOMUXC_I2C3_SCL_GPIO5_IO18        		0x1c3
-			MX8MM_IOMUXC_I2C3_SDA_GPIO5_IO19        	0x1c3
 		>;
 	};
 
@@ -310,10 +317,10 @@
 		>;
 	};
 
-	pinctrl_uart2: uart2grp {
+	pinctrl_uart3: uart3grp {
 		fsl,pins = <
-			MX8MM_IOMUXC_UART2_RXD_UART2_DCE_RX	0x140
-			MX8MM_IOMUXC_UART2_TXD_UART2_DCE_TX	0x140
+			MX8MM_IOMUXC_UART3_RXD_UART3_DCE_RX	0x140
+			MX8MM_IOMUXC_UART3_TXD_UART3_DCE_TX	0x140
 		>;
 	};
 
@@ -330,6 +337,7 @@
 			MX8MM_IOMUXC_NAND_CE3_B_USDHC3_DATA6		0x1d0
 			MX8MM_IOMUXC_NAND_CLE_USDHC3_DATA7		0x1d0
 			MX8MM_IOMUXC_NAND_CE1_B_USDHC3_STROBE		0x190
+			/* FIXME: USDHC3_RESET_B: MX8MM_IOMUXC_NAND_READY_B_SIM_M_HADDR12 0xXX */
 		>;
 	};
 
@@ -346,6 +354,7 @@
 			MX8MM_IOMUXC_NAND_CE3_B_USDHC3_DATA6		0x1d4
 			MX8MM_IOMUXC_NAND_CLE_USDHC3_DATA7		0x1d4
 			MX8MM_IOMUXC_NAND_CE1_B_USDHC3_STROBE		0x194
+			/* FIXME: USDHC3_RESET_B: MX8MM_IOMUXC_NAND_READY_B_SIM_M_HADDR12 0xXX */
 		>;
 	};
 
@@ -362,12 +371,29 @@
 			MX8MM_IOMUXC_NAND_CE3_B_USDHC3_DATA6		0x1d6
 			MX8MM_IOMUXC_NAND_CLE_USDHC3_DATA7		0x1d6
 			MX8MM_IOMUXC_NAND_CE1_B_USDHC3_STROBE		0x196
+			/* FIXME: USDHC3_RESET_B: MX8MM_IOMUXC_NAND_READY_B_SIM_M_HADDR12 0xXX */
 		>;
 	};
 
 	pinctrl_wdog: wdoggrp {
 		fsl,pins = <
 			MX8MM_IOMUXC_GPIO1_IO02_WDOG1_WDOG_B	0xc6
+		>;
+	};
+
+	pinctrl_reg_usb_otg1: usbotg1grp {
+		fsl,pins = <
+			MX8MM_IOMUXC_SAI5_RXD0_GPIO3_IO21	0x41
+		>;
+	};
+
+	pinctrl_ecspi1: ecspi1grp {
+		fsl,pins = <
+			MX8MM_IOMUXC_ECSPI1_SCLK_ECSPI1_SCLK	0x94
+			MX8MM_IOMUXC_ECSPI1_MISO_ECSPI1_MISO	0x94
+			MX8MM_IOMUXC_ECSPI1_MOSI_ECSPI1_MOSI	0x94
+			MX8MM_IOMUXC_ECSPI1_SS0_GPIO5_IO9		0x41 /* ECSPI1_SS0 */
+			MX8MM_IOMUXC_GPIO1_IO15_GPIO1_IO15		0x61 /* WP_Flash */
 		>;
 	};
 };
