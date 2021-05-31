@@ -33,27 +33,6 @@
 		compatible = "samsung,sec-mipi-dsi";
 		status = "okay";
 	};
-
-	rm67191_panel {
-		compatible = "raydium,rm67191";
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_mipi_dsi_en>;
-		reset-gpio = <&gpio1 8 GPIO_ACTIVE_LOW>;
-		dsi-lanes = <4>;
-		video-mode = <2>;	/* 0: burst mode
-					 * 1: non-burst mode with sync event
-					 * 2: non-burst mode with sync pulse
-					 */
-		panel-width-mm = <68>;
-		panel-height-mm = <121>;
-		status = "okay";
-
-		port {
-			rm67191_from_dsim: endpoint {
-				remote-endpoint = <&dsim_to_rm67191>;
-			};
-		};
-	};
 };
 
 &A53_0 {
@@ -353,12 +332,6 @@
 			remote-endpoint = <&adv7535_from_dsim>;
 		};
 	};
-
-	port@2 {
-		dsim_to_rm67191: endpoint {
-			remote-endpoint = <&rm67191_from_dsim>;
-		};
-	};
 };
 
 &iomuxc {
@@ -555,12 +528,6 @@
 	pinctrl_wdog: wdoggrp {
 		fsl,pins = <
 			MX8MM_IOMUXC_GPIO1_IO02_WDOG1_WDOG_B	0xc6
-		>;
-	};
-
-	pinctrl_mipi_dsi_en: mipi_dsi_en {
-		fsl,pins = <
-			MX8MM_IOMUXC_GPIO1_IO08_GPIO1_IO8		0x19
 		>;
 	};
 };
