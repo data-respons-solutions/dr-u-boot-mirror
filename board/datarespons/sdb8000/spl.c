@@ -7,6 +7,7 @@
 #include <cpu_func.h>
 #include <hang.h>
 #include <spl.h>
+#include <usb.h>
 #include <asm/io.h>
 #include <asm/mach-imx/iomux-v3.h>
 #include <asm/arch/clock.h>
@@ -160,6 +161,14 @@ int board_fit_config_name_match(const char *name)
 	return 0;
 }
 #endif
+
+/*
+ * We have USB_OTG_ID pin tied to ground, force DEVICE.
+ */
+int board_usb_phy_mode(struct udevice *dev)
+{
+	return USB_INIT_DEVICE;
+}
 
 void board_init_f(ulong dummy)
 {
