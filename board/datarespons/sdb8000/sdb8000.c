@@ -41,6 +41,7 @@ int board_early_init_f(void)
 	imx_iomux_v3_setup_multiple_pads(uart_pads, ARRAY_SIZE(uart_pads));
 
 	init_uart_clk(3);
+	init_clk_ecspi(0);
 
 	return 0;
 }

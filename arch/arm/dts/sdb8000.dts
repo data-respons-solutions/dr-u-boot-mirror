@@ -18,6 +18,10 @@
 	model = "Data Respons Solutions SDB8000";
 	compatible = "drs,sdb8000", "fsl,imx8mm";
 
+	aliases {
+		spi0 = &ecspi1;
+	};
+
 	chosen {
 		stdout-path = &uart4;
 	};
