@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0+
 /*
- * Copyright 2019 NXP
+ * Copyright 2021 Data Respons Solutions AB
  */
 
 #include <common.h>
@@ -28,11 +28,8 @@ DECLARE_GLOBAL_DATA_PTR;
 int spl_board_boot_device(enum boot_device boot_dev_spl)
 {
 	switch (boot_dev_spl) {
-	case SD3_BOOT:
-	case MMC3_BOOT:
-		return BOOT_DEVICE_MMC2;
 	case SPI_NOR_BOOT:
-		return BOOT_TYPE_SPINOR;
+		return BOOT_DEVICE_SPI;
 	case USB_BOOT:
 		return BOOT_DEVICE_BOARD;
 	default:
@@ -40,127 +37,87 @@ int spl_board_boot_device(enum boot_device boot_dev_spl)
 	}
 }
 
-void spl_dram_init(void)
+int board_spi_cs_gpio(unsigned bus, unsigned cs)
 {
-	ddr_init(&dram_timing);
-}
-
-#define I2C_PAD_CTRL	(PAD_CTL_DSE6 | PAD_CTL_HYS)
-#define PC MUX_PAD_CTRL(I2C_PAD_CTRL)
-struct i2c_pads_info i2c_pad_info1 = {
-	.scl = {
-		.i2c_mode = IMX8MM_PAD_I2C1_SCL_I2C1_SCL | PC,
-		.gpio_mode = IMX8MM_PAD_I2C1_SCL_GPIO5_IO14 | PC,
-		.gp = IMX_GPIO_NR(5, 14),
-	},
-	.sda = {
-		.i2c_mode = IMX8MM_PAD_I2C1_SDA_I2C1_SDA | PC,
-		.gpio_mode = IMX8MM_PAD_I2C1_SDA_GPIO5_IO15 | PC,
-		.gp = IMX_GPIO_NR(5, 15),
-	},
-};
-
-#define USDHC_PAD_CTRL	(PAD_CTL_DSE6 | PAD_CTL_HYS | PAD_CTL_PUE |PAD_CTL_PE | \
-			 PAD_CTL_FSEL2)
-
-static iomux_v3_cfg_t const usdhc3_pads[] = {
-	IMX8MM_PAD_NAND_WE_B_USDHC3_CLK | MUX_PAD_CTRL(USDHC_PAD_CTRL),
-	IMX8MM_PAD_NAND_WP_B_USDHC3_CMD | MUX_PAD_CTRL(USDHC_PAD_CTRL),
-	IMX8MM_PAD_NAND_DATA04_USDHC3_DATA0 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
-	IMX8MM_PAD_NAND_DATA05_USDHC3_DATA1 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
-	IMX8MM_PAD_NAND_DATA06_USDHC3_DATA2 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
-	IMX8MM_PAD_NAND_DATA07_USDHC3_DATA3 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
-	IMX8MM_PAD_NAND_RE_B_USDHC3_DATA4 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
-	IMX8MM_PAD_NAND_CE2_B_USDHC3_DATA5 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
-	IMX8MM_PAD_NAND_CE3_B_USDHC3_DATA6 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
-	IMX8MM_PAD_NAND_CLE_USDHC3_DATA7 | MUX_PAD_CTRL(USDHC_PAD_CTRL),
-};
-
-int board_mmc_init(bd_t *bis)
-{
-	struct fsl_esdhc_cfg usdhc_cfg = {USDHC3_BASE_ADDR, 0, 8};
-	init_clk_usdhc(2);
-	usdhc_cfg.sdhc_clk = mxc_get_clock(MXC_ESDHC3_CLK);
-	imx_iomux_v3_setup_multiple_pads(usdhc3_pads, ARRAY_SIZE(usdhc3_pads));
-	int r = fsl_esdhc_initialize(bis, &usdhc_cfg);
-	if (r)
-		return r;
-
-	return 0;
-}
-
-int board_mmc_getcd(struct mmc *mmc)
-{
-	const struct fsl_esdhc_cfg *cfg = (struct fsl_esdhc_cfg *)mmc->priv;
-
-	switch (cfg->esdhc_base) {
-	case USDHC3_BASE_ADDR:
-		return 1;
-	default:
-		return 0;
+	if (bus == 0 && cs == 0) {
+		return IMX_GPIO_NR(5, 9);
 	}
+
+	return -1;
 }
 
-#ifdef CONFIG_POWER
-#define I2C_PMIC	0
 int power_init_board(void)
 {
 	struct pmic *p;
-	int ret;
+	int r;
 
-	ret = power_bd71837_init(I2C_PMIC);
-	if (ret)
-		printf("power init failed");
+	r = power_bd71837_init(0);
+	if (r) {
+		printf("power: init failed: %d\n", r);
+		return r;
+	}
 
 	p = pmic_get("BD71837");
-	pmic_probe(p);
-
+	r = pmic_probe(p);
+	if (r) {
+		pr_err("power: probe failed: %d\n", r);
+		return r;
+	}
 
 	/* decrease RESET key long push time from the default 10s to 10ms */
-	pmic_reg_write(p, BD71837_PWRONCONFIG1, 0x0);
+	r = pmic_reg_write(p, BD71837_PWRONCONFIG1, 0x0);
+	if (r) {
+		pr_err("power: write failed: %d\n", r);
+		return r;
+	}
 
 	/* unlock the PMIC regs */
-	pmic_reg_write(p, BD71837_REGLOCK, 0x1);
+	r = pmic_reg_write(p, BD71837_REGLOCK, 0x1);
+	if (r) {
+		pr_err("power: write failed: %d\n", r);
+		return r;
+	}
 
 	/* increase VDD_SOC to typical value 0.85v before first DRAM access */
-	pmic_reg_write(p, BD71837_BUCK1_VOLT_RUN, 0x0f);
+	r = pmic_reg_write(p, BD71837_BUCK1_VOLT_RUN, 0x0f);
+	if (r) {
+		pr_err("power: write failed: %d\n", r);
+		return r;
+	}
 
 	/* increase VDD_DRAM to 0.975v for 3Ghz DDR */
-	pmic_reg_write(p, BD71837_BUCK5_VOLT, 0x83);
+	r = pmic_reg_write(p, BD71837_BUCK5_VOLT, 0x83);
+	if (r) {
+		pr_err("power: write failed: %d\n", r);
+		return r;
+	}
 
-#ifndef CONFIG_IMX8M_LPDDR4
 	/* increase NVCC_DRAM_1V2 to 1.2v for DDR4 */
-	pmic_reg_write(p, BD71837_BUCK8_VOLT, 0x28);
-#endif
+	r = pmic_reg_write(p, BD71837_BUCK8_VOLT, 0x28);
+	if (r) {
+		pr_err("power: write failed: %d\n", r);
+		return r;
+	}
 
 	/* lock the PMIC regs */
-	pmic_reg_write(p, BD71837_REGLOCK, 0x11);
+	r = pmic_reg_write(p, BD71837_REGLOCK, 0x11);
+	if (r) {
+		pr_err("power: write failed: %d\n", r);
+		return r;
+	}
 
 	return 0;
 }
-#endif
 
 void spl_board_init(void)
 {
-#ifndef CONFIG_SPL_USB_SDP_SUPPORT
-	/* Serial download mode */
-	if (is_usb_boot()) {
-		puts("Back to ROM, SDP\n");
-		restore_boot_params();
-	}
-#endif
-	puts("Normal Boot\n");
+
 }
 
-#ifdef CONFIG_SPL_LOAD_FIT
 int board_fit_config_name_match(const char *name)
 {
-	/* Just empty function now - can't decide what to choose */
-	debug("%s: %s\n", __func__, name);
-
 	return 0;
 }
-#endif
 
 /*
  * We have USB_OTG_ID pin tied to ground, force DEVICE.
@@ -168,6 +125,52 @@ int board_fit_config_name_match(const char *name)
 int board_usb_phy_mode(struct udevice *dev)
 {
 	return USB_INIT_DEVICE;
+}
+
+static iomux_v3_cfg_t const uart_pads[] = {
+	IMX8MM_PAD_UART4_RXD_UART4_RX | MUX_PAD_CTRL(PAD_CTL_DSE6 | PAD_CTL_FSEL1),
+	IMX8MM_PAD_UART4_TXD_UART4_TX | MUX_PAD_CTRL(PAD_CTL_DSE6 | PAD_CTL_FSEL1),
+};
+
+static iomux_v3_cfg_t const wdog_pads[] = {
+	IMX8MM_PAD_GPIO1_IO02_WDOG1_WDOG_B  | MUX_PAD_CTRL(PAD_CTL_DSE6 | PAD_CTL_ODE | PAD_CTL_PUE | PAD_CTL_PE),
+};
+
+struct i2c_pads_info i2c_pad_info1 = {
+	.scl = {
+		.i2c_mode = IMX8MM_PAD_I2C1_SCL_I2C1_SCL | MUX_PAD_CTRL(PAD_CTL_DSE6 | PAD_CTL_HYS),
+		.gpio_mode = IMX8MM_PAD_I2C1_SCL_GPIO5_IO14 | MUX_PAD_CTRL(PAD_CTL_DSE6 | PAD_CTL_HYS),
+		.gp = IMX_GPIO_NR(5, 14),
+	},
+	.sda = {
+		.i2c_mode = IMX8MM_PAD_I2C1_SDA_I2C1_SDA | MUX_PAD_CTRL(PAD_CTL_DSE6 | PAD_CTL_HYS),
+		.gpio_mode = IMX8MM_PAD_I2C1_SDA_GPIO5_IO15 | MUX_PAD_CTRL(PAD_CTL_DSE6 | PAD_CTL_HYS),
+		.gp = IMX_GPIO_NR(5, 15),
+	},
+};
+
+static iomux_v3_cfg_t const spi_nor_pads[] = {
+	IMX8MM_PAD_ECSPI1_SCLK_ECSPI1_SCLK	| MUX_PAD_CTRL(0x94),
+	IMX8MM_PAD_ECSPI1_MISO_ECSPI1_MISO	| MUX_PAD_CTRL(0x94),
+	IMX8MM_PAD_ECSPI1_MOSI_ECSPI1_MOSI	| MUX_PAD_CTRL(0x94),
+	IMX8MM_PAD_ECSPI1_SS0_GPIO5_IO9		| MUX_PAD_CTRL(0x41),
+};
+
+int board_early_init_f(void)
+{
+	struct wdog_regs *wdog = (struct wdog_regs *)WDOG1_BASE_ADDR;
+
+	imx_iomux_v3_setup_multiple_pads(wdog_pads, ARRAY_SIZE(wdog_pads));
+
+	set_wdog_reset(wdog);
+
+	imx_iomux_v3_setup_multiple_pads(uart_pads, ARRAY_SIZE(uart_pads));
+	imx_iomux_v3_setup_multiple_pads(spi_nor_pads, ARRAY_SIZE(spi_nor_pads));
+
+	init_uart_clk(3);
+	init_clk_ecspi(0);
+
+	return 0;
 }
 
 void board_init_f(ulong dummy)
@@ -199,7 +202,7 @@ void board_init_f(ulong dummy)
 	power_init_board();
 
 	/* DDR initialization */
-	spl_dram_init();
+	ddr_init(&dram_timing);
 
 	board_init_r(NULL, 0);
 }

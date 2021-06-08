@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0+
 /*
- * Copyright 2018 NXP
+ * Copyright 2021 Data Respons Solutions AB
  */
 #include <common.h>
 #include <miiphy.h>
@@ -18,16 +18,13 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
-#define UART_PAD_CTRL	(PAD_CTL_DSE6 | PAD_CTL_FSEL1)
-#define WDOG_PAD_CTRL	(PAD_CTL_DSE6 | PAD_CTL_ODE | PAD_CTL_PUE | PAD_CTL_PE)
-
 static iomux_v3_cfg_t const uart_pads[] = {
-	IMX8MM_PAD_UART4_RXD_UART4_RX | MUX_PAD_CTRL(UART_PAD_CTRL),
-	IMX8MM_PAD_UART4_TXD_UART4_TX | MUX_PAD_CTRL(UART_PAD_CTRL),
+	IMX8MM_PAD_UART4_RXD_UART4_RX | MUX_PAD_CTRL(PAD_CTL_DSE6 | PAD_CTL_FSEL1),
+	IMX8MM_PAD_UART4_TXD_UART4_TX | MUX_PAD_CTRL(PAD_CTL_DSE6 | PAD_CTL_FSEL1),
 };
 
 static iomux_v3_cfg_t const wdog_pads[] = {
-	IMX8MM_PAD_GPIO1_IO02_WDOG1_WDOG_B  | MUX_PAD_CTRL(WDOG_PAD_CTRL),
+	IMX8MM_PAD_GPIO1_IO02_WDOG1_WDOG_B  | MUX_PAD_CTRL(PAD_CTL_DSE6 | PAD_CTL_ODE | PAD_CTL_PUE | PAD_CTL_PE),
 };
 
 int board_early_init_f(void)
