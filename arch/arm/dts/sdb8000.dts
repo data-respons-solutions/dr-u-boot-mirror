@@ -263,6 +263,8 @@
 };
 
 &usbotg1 {
+	dr_mode = "host";
+	vbus-supply = <&reg_usb_otg1>;
 	status = "okay";
 };
 
