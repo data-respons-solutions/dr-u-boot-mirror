@@ -200,9 +200,9 @@ void board_init_f(ulong dummy)
 	setup_i2c(0, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info1);
 
 	power_init_board();
-
 	/* DDR initialization */
 	ddr_init(&dram_timing);
+	printf("Ram size: 0x%lx\n", get_ram_size((void*)CONFIG_SYS_INIT_RAM_ADDR, CONFIG_SYS_INIT_RAM_SIZE));
 
 	board_init_r(NULL, 0);
 }
