@@ -613,20 +613,14 @@ const struct mx6_mmdc_calibration mx6_mmcd_calib = {
 };
 
 const struct mx6_mmdc_calibration mx6q_mmcd_calib = {
-	.p0_mpwldectrl0 =  0x001B0012,
-	.p0_mpwldectrl1 =  0x0027001D,
-	.p1_mpwldectrl0 =  0x00100021,
-	.p1_mpwldectrl1 =  0x000E001C,
+	.p0_mpwldectrl0 =  0x001B0017,
+	.p0_mpwldectrl1 =  0x0023001D,
 
-	.p0_mpdgctrl0 =  0x43180330,
-	.p0_mpdgctrl1 =  0x031C0310,
-	.p1_mpdgctrl0 =  0x4320032C,
-	.p1_mpdgctrl1 =  0x031C0264,
+	.p0_mpdgctrl0 =  0x03040318,
+	.p0_mpdgctrl1 =  0x03040268,
 
-	.p0_mprddlctl =  0x4C40444A,
-	.p1_mprddlctl =  0x46403E4E,
-	.p0_mpwrdlctl =  0x32383836,
-	.p1_mpwrdlctl =  0x3A304438,
+	.p0_mprddlctl =  0x42323840,
+	.p0_mpwrdlctl =  0x3A3A403A,
 };
 
 const struct mx6_mmdc_calibration mx6dl_mmcd_calib = {
@@ -784,9 +778,9 @@ static void spl_dram_init(void)
 	}
 	else
 	{
-		sysinfo.dsize = 2;
-		mx6dq_dram_iocfg(64, &mx6q_ddr_ioregs, &mx6q_grp_ioregs);
-		mx6_dram_cfg(&sysinfo, &mx6q_mmcd_calib, &mem_ddr_512x16);
+		sysinfo.dsize = 1;
+		mx6dq_dram_iocfg(32, &mx6q_ddr_ioregs, &mx6q_grp_ioregs);
+		mx6_dram_cfg(&sysinfo, &mx6q_mmcd_calib, &mem_ddr_256x16);
 	}
 }
 
@@ -835,7 +829,7 @@ void board_init_f(ulong dummy)
 		udelay(10000);
 	}
 	/* DDR initialization */
-	printf("Memory width %d\n", is_mx6dl() ? 32 : 64);
+	printf("Memory width %d\n", is_mx6dl() ? 32 : 32);
 
 	spl_dram_init();
 #ifdef DYNAMIC_CALIB
