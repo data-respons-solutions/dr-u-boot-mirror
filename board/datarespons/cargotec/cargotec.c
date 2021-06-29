@@ -149,16 +149,12 @@ int board_usb_phy_mode(int port)
 
 	switch(port) {
 	case 0:
-#ifdef CONFIG_FACTORY_BOOT
-		return USB_INIT_DEVICE;
-#else
 		if (((bmode >> 24) & 0x03) == 0x01)	{
 			printf("USB OTG in serial download mode\n");
 			return USB_INIT_DEVICE;
 		}
 		else
 			return USB_INIT_HOST;
-#endif
 		break;
 	case 1:
 		return USB_INIT_HOST;
