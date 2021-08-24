@@ -146,6 +146,9 @@
 
 #if defined(CONFIG_ANDROID_SUPPORT)
 #include "imx8mm_evk_android.h"
+/* FIXME: This shouldn't be needed */
+#define is_boot_from_usb is_usb_boot
 #endif
+
 
 #endif
