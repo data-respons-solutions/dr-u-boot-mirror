@@ -58,7 +58,7 @@
 
 /* disable nxp imx8 shenanigans */
 #undef is_boot_from_usb
-#define CONFIG_SYS_MMC_ENV_DEV 1 /* Can mmc env be disabled..? */
+#define CONFIG_SYS_MMC_ENV_DEV 2 /* Can mmc env be disabled..? */
 
 /* boot configuration */
 #define DEFAULT_USB_DEV "0"
@@ -146,6 +146,7 @@
 #endif
 
 #if defined(CONFIG_ANDROID_SUPPORT)
+
 #include "imx8mm_evk_android.h"
 /* FIXME: This shouldn't be needed */
 #define is_boot_from_usb is_usb_boot
