@@ -40,6 +40,7 @@
 
 #define CONFIG_CMD_READ
 #define CONFIG_SERIAL_TAG
+#define CONFIG_FASTBOOT_USB_DEV 0
 
 #define CONFIG_REMAKE_ELF
 /* ENET Config */

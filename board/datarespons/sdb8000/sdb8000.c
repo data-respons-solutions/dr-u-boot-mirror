@@ -78,6 +78,12 @@ int board_phy_config(struct phy_device *phydev)
 }
 #endif
 
+/* Override __weak implementation to act as fastboot gadget */
+int board_usb_phy_mode(struct udevice *dev)
+{
+	return USB_INIT_DEVICE;
+}
+
 #define FSL_SIP_GPC			0xC2000000
 #define FSL_SIP_CONFIG_GPC_PM_DOMAIN	0x3
 #define DISPMIX				9
