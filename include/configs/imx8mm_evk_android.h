@@ -21,11 +21,15 @@
 #undef CONFIG_EXTRA_ENV_SETTINGS
 #undef CONFIG_BOOTCOMMAND
 
-#define CONFIG_EXTRA_ENV_SETTINGS		\
-	"splashpos=m,m\0"			\
-	"splashimage=0x50000000\0"		\
-	"fdt_high=0xffffffffffffffff\0"		\
-	"initrd_high=0xffffffffffffffff\0"	\
+// FIXME: These changes are in the wrong file
+#define CONFIG_EXTRA_ENV_SETTINGS			 \
+	"splashpos=m,m\0"				 \
+	"splashimage=0x50000000\0"			 \
+	"fdt_high=0xffffffffffffffff\0"			 \
+	"initrd_high=0xffffffffffffffff\0"		 \
+	"mmcdev="__stringify(CONFIG_SYS_MMC_ENV_DEV)"\0" \
+	"fastboot_dev=mmc2\0"				 \
+	"emmc_dev=2\0"					 \
 
 /* Enable mcu firmware flash */
 #ifdef CONFIG_FLASH_MCUFIRMWARE_SUPPORT

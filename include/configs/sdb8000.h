@@ -145,9 +145,24 @@
 #define CONFIG_VIDEO_BMP_LOGO
 #endif
 
+#define CONFIG_ANDROID_SUPPORT 1
 #if defined(CONFIG_ANDROID_SUPPORT)
-
+#undef CONFIG_EXTRA_ENV_SETTINGS
+#define CONFIG_EXTRA_ENV_SETTINGS
 #include "imx8mm_evk_android.h"
+
+// FIXME: This is not the best way to do things
+#undef CONFIG_EXTRA_ENV_SETTINGS
+#define CONFIG_EXTRA_ENV_SETTINGS				\
+	"splashpos=m,m\0"					\
+	"splashimage=0x50000000\0"				\
+	"fdt_high=0xffffffffffffffff\0"				\
+	"initrd_high=0xffffffffffffffff\0"			\
+	"mmcdev="__stringify(CONFIG_SYS_MMC_ENV_DEV)"\0"	\
+	"fastboot_dev=mmc2\0"					\
+	"emmc_dev=2\0"						\
+
+
 /* FIXME: This shouldn't be needed */
 #define is_boot_from_usb is_usb_boot
 #endif
