@@ -92,13 +92,6 @@ int power_init_board(void)
 		return r;
 	}
 
-	/* increase NVCC_DRAM_1V2 to 1.2v for DDR4 */
-	r = pmic_reg_write(p, BD71837_BUCK8_VOLT, 0x28);
-	if (r) {
-		pr_err("power: write failed: %d\n", r);
-		return r;
-	}
-
 	/* lock the PMIC regs */
 	r = pmic_reg_write(p, BD71837_REGLOCK, 0x11);
 	if (r) {
