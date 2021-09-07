@@ -66,7 +66,7 @@
 #define SYS_BOOT_IFACE "mmc"
 #define SYS_BOOT_DEV 2
 
-#define FIT_ADDR "0x43200000"
+#define FIT_ADDR "0x43400000"
 
 #include "../../board/datarespons/common/include/configs/datarespons.h"
 
