@@ -23,6 +23,8 @@
 #include <fsl_esdhc_imx.h>
 #include <mmc.h>
 
+#include "dram_timing_spi.h"
+
 DECLARE_GLOBAL_DATA_PTR;
 
 int spl_board_boot_device(enum boot_device boot_dev_spl)
@@ -166,6 +168,18 @@ int board_early_init_f(void)
 	return 0;
 }
 
+void spl_ddr_init(void)
+{
+	struct dram_timing_info spi_dram_timing;
+	if (load_dram_timing_spi(&spi_dram_timing) == 0) {
+		ddr_init(&spi_dram_timing);
+	}
+	else {
+		printf("Fallback -- hard-coded ddr timing\n");
+		ddr_init(&dram_timing);
+	}
+}
+
 void board_init_f(ulong dummy)
 {
 	int ret;
@@ -194,7 +208,8 @@ void board_init_f(ulong dummy)
 
 	power_init_board();
 	/* DDR initialization */
-	ddr_init(&dram_timing);
+	spl_ddr_init();
+
 	printf("Ram size: 0x%lx\n", get_ram_size((void*)CONFIG_SYS_INIT_RAM_ADDR, CONFIG_SYS_INIT_RAM_SIZE));
 
 	board_init_r(NULL, 0);

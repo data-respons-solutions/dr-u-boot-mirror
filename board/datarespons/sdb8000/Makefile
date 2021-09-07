@@ -5,7 +5,7 @@
 #
 
 ifdef CONFIG_SPL_BUILD
-obj-y += spl.o lpddr4_timing.o
+obj-y += spl.o lpddr4_timing.o dram_timing_spi.o
 else
 obj-y += sdb8000.o
 endif
