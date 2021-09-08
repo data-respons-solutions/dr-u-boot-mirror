@@ -8,20 +8,16 @@
 #include <hang.h>
 #include <spl.h>
 #include <usb.h>
-#include <asm/io.h>
 #include <asm/mach-imx/iomux-v3.h>
 #include <asm/arch/clock.h>
 #include <asm/arch/imx8mm_pins.h>
 #include <asm/arch/sys_proto.h>
 #include <asm/mach-imx/boot_mode.h>
 #include <asm/arch/ddr.h>
-
 #include <power/pmic.h>
 #include <power/bd71837.h>
 #include <asm/mach-imx/gpio.h>
 #include <asm/mach-imx/mxc_i2c.h>
-#include <fsl_esdhc_imx.h>
-#include <mmc.h>
 
 #include "dram_timing_spi.h"
 
@@ -205,12 +201,10 @@ void board_init_f(ulong dummy)
 
 	/* Adjust pmic voltage to 1.0V for 800M */
 	setup_i2c(0, CONFIG_SYS_I2C_SPEED, 0x7f, &i2c_pad_info1);
-
 	power_init_board();
+
 	/* DDR initialization */
 	spl_ddr_init();
-
-	printf("Ram size: 0x%lx\n", get_ram_size((void*)CONFIG_SYS_INIT_RAM_ADDR, CONFIG_SYS_INIT_RAM_SIZE));
 
 	board_init_r(NULL, 0);
 }

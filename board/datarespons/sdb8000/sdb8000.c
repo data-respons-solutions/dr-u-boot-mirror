@@ -6,15 +6,9 @@
 #include <miiphy.h>
 #include <netdev.h>
 #include <asm/mach-imx/iomux-v3.h>
-#include <asm-generic/gpio.h>
 #include <asm/arch/imx8mm_pins.h>
 #include <asm/arch/clock.h>
 #include <asm/arch/sys_proto.h>
-#include <asm/mach-imx/gpio.h>
-#include <asm/mach-imx/mxc_i2c.h>
-#include <i2c.h>
-#include <asm/io.h>
-#include <usb.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -43,13 +37,6 @@ int board_early_init_f(void)
 	return 0;
 }
 
-/* For android */
-__weak int mmc_map_to_kernel_blk(int dev_no)
-{
-	return dev_no;
-}
-
-#if IS_ENABLED(CONFIG_FEC_MXC)
 static int setup_fec(void)
 {
 	struct iomuxc_gpr_base_regs *gpr =
@@ -76,35 +63,10 @@ int board_phy_config(struct phy_device *phydev)
 		phydev->drv->config(phydev);
 	return 0;
 }
-#endif
-
-#define FSL_SIP_GPC			0xC2000000
-#define FSL_SIP_CONFIG_GPC_PM_DOMAIN	0x3
-#define DISPMIX				9
-#define MIPI				10
 
 int board_init(void)
 {
-	if (IS_ENABLED(CONFIG_FEC_MXC))
-		setup_fec();
-
-	call_imx_sip(FSL_SIP_GPC, FSL_SIP_CONFIG_GPC_PM_DOMAIN, DISPMIX, true, 0);
-	call_imx_sip(FSL_SIP_GPC, FSL_SIP_CONFIG_GPC_PM_DOMAIN, MIPI, true, 0);
+	setup_fec();
 
 	return 0;
 }
-
-#ifdef CONFIG_FSL_FASTBOOT
-#ifdef CONFIG_ANDROID_RECOVERY
-int is_recovery_key_pressing(void)
-{
-	return 0; /*TODO*/
-}
-#endif /*CONFIG_ANDROID_RECOVERY*/
-#endif /*CONFIG_FSL_FASTBOOT*/
-
-#ifdef CONFIG_ANDROID_SUPPORT
-bool is_power_key_pressed(void) {
-	return (bool)(!!(readl(SNVS_HPSR) & (0x1 << 6)));
-}
-#endif
