@@ -18,6 +18,7 @@
 #include <power/bd71837.h>
 #include <asm/mach-imx/gpio.h>
 #include <asm/mach-imx/mxc_i2c.h>
+#include <spi_flash.h>
 
 #include "dram_timing_spi.h"
 
@@ -33,6 +34,27 @@ int spl_board_boot_device(enum boot_device boot_dev_spl)
 	default:
 		return BOOT_DEVICE_NONE;
 	}
+}
+
+/*
+ * u-boot image is stored in two flash sections for power fail safe updates. We avoid having to re-write spi
+ * loader by calling existing functions twice and adjusting offset from here.
+ */
+#define CONFIG_SYS_SPI_U_BOOT2_OFFS 0x1F0000
+
+void board_boot_order(u32 *spl_boot_list)
+{
+	spl_boot_list[0] = spl_boot_device();
+	spl_boot_list[1] = spl_boot_device();
+}
+
+unsigned int spl_spi_get_uboot_offs(struct spi_flash *flash)
+{
+	static int i = 0;
+	const unsigned int offs = i == 0 ? CONFIG_SYS_SPI_U_BOOT_OFFS : CONFIG_SYS_SPI_U_BOOT2_OFFS;
+	i++;
+	printf("SPI offs: 0x%x\n", offs);
+	return offs;
 }
 
 int board_spi_cs_gpio(unsigned bus, unsigned cs)
