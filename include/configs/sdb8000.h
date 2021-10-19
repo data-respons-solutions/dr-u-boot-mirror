@@ -36,8 +36,8 @@
 #define CONFIG_SYS_BOOTM_LEN (1024 * 1024 * 512) /* fit image might include kernel and ramdisk, increase size */
 #define DEFAULT_USB_DEV "0"
 #define DEFAULT_USB_PART "1"
-#define SYS_BOOT_IFACE "mmc"
-#define SYS_BOOT_DEV 2
+#define SYS_BOOT_IFACE "mmc" // Also for android_boot
+#define SYS_BOOT_DEV 2 // Also for android_boot
 #define FIT_ADDR "0x43400000"
 
 #include "../../board/datarespons/common/include/configs/datarespons.h"
@@ -97,52 +97,11 @@
 /* Android */
 #ifdef CONFIG_ANDROID_SUPPORT
 #undef CONFIG_BOOTCOMMAND
-#undef CONFIG_EXTRA_ENV_SETTINGS
-#define CONFIG_EXTRA_ENV_SETTINGS \
-	"splashpos=m,m\0" \
-	"splashimage=0x50000000\0" \
-	"fdt_high=0xffffffffffffffff\0"	\
-	"initrd_high=0xffffffffffffffff\0" \
-	"mmcdev="__stringify(CONFIG_SYS_MMC_ENV_DEV)"\0" \
-	"fastboot_dev=mmc2\0" \
-	"emmc_dev=2\0"
+#define CONFIG_BOOTCOMMAND \
+	"echo starting boot procedure...;" \
+	"android_boot;"
 #define is_boot_from_usb is_usb_boot
-#define CONFIG_ANDROID_AB_SUPPORT
 #define CONFIG_SYSTEM_RAMDISK_SUPPORT
-
-/* fastboot */
-#define CONFIG_FASTBOOT_USB_DEV 0
-#define FSL_FASTBOOT_FB_DEV "mmc"
-
-/* Enable mcu firmware flash */
-#ifdef CONFIG_FLASH_MCUFIRMWARE_SUPPORT
-#define ANDROID_MCU_FRIMWARE_DEV_TYPE DEV_MMC
-#define ANDROID_MCU_FIRMWARE_START 0x500000
-#define ANDROID_MCU_FIRMWARE_SIZE  0x40000
-#define ANDROID_MCU_FIRMWARE_HEADER_STACK 0x20020000
-#endif
-
-#if !defined(CONFIG_IMX_TRUSTY_OS) || !defined(CONFIG_DUAL_BOOTLOADER)
-#undef CONFIG_FSL_CAAM_KB
-#endif
-
-#ifdef CONFIG_DUAL_BOOTLOADER
-#define CONFIG_SYS_SPL_PTE_RAM_BASE    0x41580000
-#ifdef CONFIG_IMX_TRUSTY_OS
-#define BOOTLOADER_RBIDX_OFFSET  0x3FE000
-#define BOOTLOADER_RBIDX_START   0x3FF000
-#define BOOTLOADER_RBIDX_LEN     0x08
-#define BOOTLOADER_RBIDX_INITVAL 0
-#endif
-#endif
-
-#ifdef CONFIG_IMX_TRUSTY_OS
-#define AVB_RPMB
-#define KEYSLOT_HWPARTITION_ID 2
-#define KEYSLOT_BLKS             0x1FFF
-#define NS_ARCH_ARM64 1
-#endif
-
 #endif
 
 #endif // __SDB8000_H
