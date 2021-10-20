@@ -22,6 +22,11 @@
  * abootimg for android image?
  */
 
+/*
+ * As device is unlocked should state be orange and not green?
+ * Do we need androidboot.flash.locked=0 ?
+ */
+
 static int validate_avb(int slot, AvbSlotVerifyData** out_data)
 {
 	const char * const requested_partitions[] = {"boot", "dtbo", "vendor_boot", NULL};
@@ -63,7 +68,8 @@ static int validate_avb(int slot, AvbSlotVerifyData** out_data)
 		 * up Android, in this condition, "androidboot.force_normal_boot=1" is needed */
 		char extra_args[59] = "androidboot.slot_suffix=_x androidboot.force_normal_boot=1";
 		extra_args[25] = BOOT_SLOT_NAME(slot);
-		char *cmdline = avb_strdupv((*out_data)->cmdline, " ", avb_state, " ", extra_args);
+		const char *extra_args2 = "androidboot.flash.locked=0 androidboot.soc_type=imx8mm";
+		char *cmdline = avb_strdupv((*out_data)->cmdline, " ", avb_state, " ", extra_args, " ", extra_args2);
 		if (!cmdline) {
 			printf("ANDROID: cmdline memory allocation failure\n");
 			goto exit;
