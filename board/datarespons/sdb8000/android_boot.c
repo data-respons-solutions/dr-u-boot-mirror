@@ -5,6 +5,7 @@
 #include <android_ab.h>
 #include <avb_verify.h>
 #include <android_image.h>
+#include <image-android-dt.h>
 #include <dt_table.h>
 
 /* Depends:
@@ -17,6 +18,10 @@
 
 /* Remove this after reviewing all loadaddr */
 #define MAX_KERNEL_LEN (64 * 1024 * 1024)
+#define FDT_MAX_SIZE (2 * 1024 * 1024)
+
+/* Should we leave it fixed ? */
+#define DTBO_INDEX 0
 
 /*
  * There is adtimage for parsing dtbo images?
@@ -147,6 +152,23 @@ static AvbPartitionData* get_avb_part(AvbSlotVerifyData* avb_data, const char* n
 	return part;
 }
 
+static int find_fdt(AvbPartitionData *avb_dtbo, ulong* addr, u32* size)
+{
+	if (!android_dt_check_header((ulong) avb_dtbo->data)) {
+		printf("ANDROID: dt table header invalid\n");
+		return -EFAULT;
+	}
+	if (!android_dt_get_fdt_by_index((ulong) avb_dtbo->data, DTBO_INDEX, addr, size)) {
+		printf("ANDROID: dt index %" PRIu32 " not found\n", DTBO_INDEX);
+		return -EFAULT;
+	}
+	if (*size > FDT_MAX_SIZE) {
+		printf("ANDROID: dt index %" PRIu32" too large: %" PRIu32 " > %" PRIu32 "\n", DTBO_INDEX, *size, FDT_MAX_SIZE);
+		return -EFAULT;
+	}
+	return 0;
+}
+
 static int load_android(AvbSlotVerifyData* avb_data)
 {
 
@@ -155,6 +177,9 @@ static int load_android(AvbSlotVerifyData* avb_data)
 	AvbPartitionData *avb_boot = NULL;
 	AvbPartitionData *avb_vendor = NULL;
 	AvbPartitionData *avb_dtbo = NULL;
+	ulong addr = 0;
+	u32 size = 0;
+	int r = 0;
 
 	if ((avb_boot = get_avb_part(avb_data, "boot")) == NULL)
 		return -ENOENT;
@@ -192,24 +217,12 @@ static int load_android(AvbSlotVerifyData* avb_data)
 		memcpy((void*) (ulong) ramdisk_loadaddr, (void*) ramdisk_start, hdr_v3->ramdisk_size);
 	}
 
-	const struct dt_table_header *dt_img = (struct dt_table_header *)avb_dtbo->data;
-	if (be32_to_cpu(dt_img->magic) != DT_TABLE_MAGIC) {
-		printf("ANDROID: dt table bad magic\n");
-		return -EFAULT;
-	}
-	if (!be32_to_cpu(dt_img->dt_entry_count)) {
-		printf("ANDROID: dt table empty\n");
-		return -EFAULT;
-	}
-	const struct dt_table_entry *dt_entry = (struct dt_table_entry *)((ulong) dt_img + be32_to_cpu(dt_img->dt_entries_offset));
+	r = find_fdt(avb_dtbo, &addr, &size);
+	if (r)
+		return r;
 	const ulong fdt_addr = (ulong) vendor_hdr_v3->kernel_addr + MAX_KERNEL_LEN;
-	const uint32_t fdt_size = be32_to_cpu(dt_entry->dt_size);
-	if (!fdt_size) {
-		printf("ANDROID: dt table entry empty\n");
-		return -EFAULT;
-	}
-	printf("ANDROID: load dtb to            0x%08lx, size %" PRIu32 "\n", fdt_addr, fdt_size);
-	memcpy((void *) fdt_addr, (void *) (ulong) dt_img + be32_to_cpu(dt_entry->dt_offset), fdt_size);
+	printf("ANDROID: load dtb to            0x%08lx, size %" PRIu32 "\n", addr, size);
+	memcpy((void *) fdt_addr, (void *) addr, size);
 
 	/* set cmdline */
 	android_image_get_kernel_v3(hdr_v3, vendor_hdr_v3);
