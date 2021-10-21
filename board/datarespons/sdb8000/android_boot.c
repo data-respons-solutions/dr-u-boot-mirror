@@ -73,7 +73,7 @@ static int validate_avb(int slot, AvbSlotVerifyData** out_data)
 		printf("ANDROID: Can't determine device lock state\n");
 		goto exit;
 	}
-	printf("ANDROID: lock_state: %d\n", unlocked);
+	printf("ANDROID: locked: %s\n", unlocked ? "no" : "yes");
 
 	slot_result = avb_slot_verify(avb_ops, requested_partitions, slot_suffix,
 				unlocked, AVB_HASHTREE_ERROR_MODE_RESTART_AND_INVALIDATE, out_data);
