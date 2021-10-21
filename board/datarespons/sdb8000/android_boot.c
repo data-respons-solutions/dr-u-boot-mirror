@@ -69,7 +69,7 @@ static int validate_avb(int slot, AvbSlotVerifyData** out_data)
 		char extra_args[59] = "androidboot.slot_suffix=_x androidboot.force_normal_boot=1";
 		extra_args[25] = BOOT_SLOT_NAME(slot);
 		const char *extra_args2 = "androidboot.flash.locked=0 androidboot.soc_type=imx8mm";
-		char *cmdline = avb_strdupv((*out_data)->cmdline, " ", avb_state, " ", extra_args, " ", extra_args2);
+		char *cmdline = avb_strdupv((*out_data)->cmdline, " ", avb_state, " ", extra_args, " ", extra_args2, NULL);
 		if (!cmdline) {
 			printf("ANDROID: cmdline memory allocation failure\n");
 			goto exit;
