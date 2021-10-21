@@ -1,4 +1,5 @@
 #include <common.h>
+#include <usb.h>
 #include <inttypes.h>
 #include <command.h>
 #include <android_ab.h>
@@ -26,6 +27,30 @@
  * As device is unlocked should state be orange and not green?
  * Do we need androidboot.flash.locked=0 ?
  */
+
+/* Map u-boot mmc device index to kernel block device index
+ */
+int mmc_map_to_kernel_blk(int dev_no)
+{
+	return dev_no;
+}
+
+/* Boot metric variables */
+boot_metric metrics = {
+  .bll_1 = 0,
+  .ble_1 = 0,
+  .kl	 = 0,
+  .kd	 = 0,
+  .avb	 = 0,
+  .odt	 = 0,
+  .sw	 = 0
+};
+
+/* Override to act as fastboot gadget */
+int board_usb_phy_mode(struct udevice *dev)
+{
+	return USB_INIT_DEVICE;
+}
 
 static int validate_avb(int slot, AvbSlotVerifyData** out_data)
 {

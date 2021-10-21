@@ -3,14 +3,12 @@
  * Copyright 2021 Data Respons Solutions AB
  */
 #include <common.h>
-#include <usb.h>
 #include <miiphy.h>
 #include <netdev.h>
 #include <asm/mach-imx/iomux-v3.h>
 #include <asm/arch/imx8mm_pins.h>
 #include <asm/arch/clock.h>
 #include <asm/arch/sys_proto.h>
-#include <android_image.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -72,36 +70,3 @@ int board_init(void)
 
 	return 0;
 }
-
-#ifdef CONFIG_ANDROID_SUPPORT
-/* Boot metric variables */
-boot_metric metrics = {
-  .bll_1 = 0,
-  .ble_1 = 0,
-  .kl	 = 0,
-  .kd	 = 0,
-  .avb	 = 0,
-  .odt	 = 0,
-  .sw	 = 0
-};
-
-/* Override to act as fastboot gadget */
-int board_usb_phy_mode(struct udevice *dev)
-{
-	return USB_INIT_DEVICE;
-}
-
-__weak int mmc_map_to_kernel_blk(int dev_no)
-{
-	return dev_no;
-}
-
-int is_recovery_key_pressing(void)
-{
-	return 0; /*TODO*/
-}
-
-bool is_power_key_pressed(void) {
-	return (bool)(!!(readl(SNVS_HPSR) & (0x1 << 6)));
-}
-#endif
