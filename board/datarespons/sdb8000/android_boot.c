@@ -218,9 +218,9 @@ static int do_android_boot(cmd_tbl_t *cmdtp, int flag, int argc,
 		goto exit;
 	}
 
-	r = part_get_info_by_name(slot_dev, "fbmisc", &slot_part);
+	r = part_get_info_by_name(slot_dev, "misc", &slot_part);
 	if (r < 1) {
-		printf("ANDROID: fbmisc partition not found on %s:%d\n", SYS_BOOT_IFACE, SYS_BOOT_DEV);
+		printf("ANDROID: misc partition not found on %s:%d\n", SYS_BOOT_IFACE, SYS_BOOT_DEV);
 		goto exit;
 	}
 
