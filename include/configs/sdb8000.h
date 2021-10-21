@@ -39,14 +39,15 @@
 #define CONFIG_SYS_BOOTM_LEN (1024 * 1024 * 512) /* fit image might include kernel and ramdisk, increase size */
 #define DEFAULT_USB_DEV "0"
 #define DEFAULT_USB_PART "1"
-#define SYS_BOOT_IFACE "mmc" // Also for android_boot
-#define SYS_BOOT_DEV 2 // Also for android_boot
+#define SYS_BOOT_IFACE "mmc" /* Required by android_boot */
+#define SYS_BOOT_DEV 2 /* Required by android_boot */
 #define FIT_ADDR "0x43400000"
 
 #include "../../board/datarespons/common/include/configs/datarespons.h"
 
 #define CONFIG_EXTRA_ENV_SETTINGS \
-	DATARESPONS_BOOT_SCRIPTS
+	DATARESPONS_BOOT_SCRIPTS \
+	"soc_type=imx8mm\0" /* Required by Android */
 
 #define CONFIG_BOOTCOMMAND \
 	"echo starting boot procedure...;" \

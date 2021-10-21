@@ -12,9 +12,12 @@
  * CONFIG_ANDROID_AB=y
  * CONFIG_AVB_VERIFY=y
  * CONFIG_LIBAVB=y
+ * CONFIG_ANDROID_BOOT_IMAGE=y
  * SYS_BOOT_DEV --> boot device num
  * SYS_BOOT_IFACE --> boot iface
  */
+
+#define BOOT_IMAGE_HDR_V3_SIZE 4096
 
 /* Remove this after reviewing all loadaddr */
 #define MAX_KERNEL_LEN (64 * 1024 * 1024)
@@ -23,14 +26,7 @@
 /* Should we leave it fixed ? */
 #define DTBO_INDEX 0
 
-/*
- * There is adtimage for parsing dtbo images?
- * abootimg for android image?
- */
-
-/*
- * As device is unlocked should state be orange and not green?
- * Do we need androidboot.flash.locked=0 ?
+/* As device is unlocked should state be AVB_ORANGE and not AVB_GREEN?
  */
 
 /* Map u-boot mmc device index to kernel block device index
@@ -98,8 +94,7 @@ static int validate_avb(int slot, AvbSlotVerifyData** out_data)
 		 * up Android, in this condition, "androidboot.force_normal_boot=1" is needed */
 		char extra_args[59] = "androidboot.slot_suffix=_x androidboot.force_normal_boot=1";
 		extra_args[25] = BOOT_SLOT_NAME(slot);
-		const char *extra_args2 = "androidboot.flash.locked=0 androidboot.soc_type=imx8mm";
-		char *cmdline = avb_strdupv((*out_data)->cmdline, " ", avb_state, " ", extra_args, " ", extra_args2, NULL);
+		char *cmdline = avb_strdupv((*out_data)->cmdline, " ", avb_state, " ", extra_args, " ", NULL);
 		if (!cmdline) {
 			printf("ANDROID: cmdline memory allocation failure\n");
 			goto exit;
@@ -152,20 +147,60 @@ static AvbPartitionData* get_avb_part(AvbSlotVerifyData* avb_data, const char* n
 	return part;
 }
 
-static int find_fdt(AvbPartitionData *avb_dtbo, ulong* addr, u32* size)
+static int load_kernel(const struct boot_img_hdr_v3* hdr_v3, const struct vendor_boot_img_hdr_v3* vendor_hdr_v3)
 {
+	const ulong loadaddr = (ulong) vendor_hdr_v3->kernel_addr;
+	const ulong addr = (ulong) hdr_v3 + BOOT_IMAGE_HDR_V3_SIZE;
+	const u32 size = hdr_v3->kernel_size;
+	if (!size || !image_arm64((void *)(addr))) {
+		printf("ANDROID: invalid kernel image\n");
+		return -EFAULT;
+	}
+	printf("ANDROID: load kernel to         0x%08lx, size: %" PRIu32 "\n", loadaddr, size);
+	memcpy((void*) loadaddr, (void*) addr, size);
+
+	return 0;
+}
+
+static int load_ramdisk(const struct boot_img_hdr_v3* hdr_v3, const struct vendor_boot_img_hdr_v3* vendor_hdr_v3)
+{
+	if (vendor_hdr_v3->vendor_ramdisk_size) {
+		const ulong vendor_ramdisk_loadaddr = (ulong) vendor_hdr_v3->ramdisk_addr;
+		printf("ANDROID: load vendor ramdisk to 0x%08" PRIx32 ", size: %" PRIu32 "\n", vendor_hdr_v3->ramdisk_addr, vendor_hdr_v3->vendor_ramdisk_size);
+		const ulong vendor_ramdisk_start = (ulong) vendor_hdr_v3 + ALIGN(sizeof(struct vendor_boot_img_hdr_v3), vendor_hdr_v3->page_size);
+		memcpy((void*) vendor_ramdisk_loadaddr, (void*) vendor_ramdisk_start, vendor_hdr_v3->vendor_ramdisk_size);
+	}
+
+	if (hdr_v3->ramdisk_size) {
+		const ulong ramdisk_loadaddr = (ulong) vendor_hdr_v3->ramdisk_addr + vendor_hdr_v3->vendor_ramdisk_size;
+		printf("ANDROID: load boot ramdisk to   0x%08lx, size: %" PRIu32 "\n", ramdisk_loadaddr, hdr_v3->ramdisk_size);
+		const ulong ramdisk_start = (ulong) hdr_v3 + BOOT_IMAGE_HDR_V3_SIZE + ALIGN(hdr_v3->kernel_size, vendor_hdr_v3->page_size);
+		memcpy((void*) ramdisk_loadaddr, (void*) ramdisk_start, hdr_v3->ramdisk_size);
+	}
+
+	return 0;
+}
+
+static int load_fdt(const AvbPartitionData* avb_dtbo, u32 dtbo_index, ulong loadaddr)
+{
+	ulong addr = 0;
+	u32 size = 0;
+
 	if (!android_dt_check_header((ulong) avb_dtbo->data)) {
 		printf("ANDROID: dt table header invalid\n");
 		return -EFAULT;
 	}
-	if (!android_dt_get_fdt_by_index((ulong) avb_dtbo->data, DTBO_INDEX, addr, size)) {
-		printf("ANDROID: dt index %" PRIu32 " not found\n", DTBO_INDEX);
+	if (!android_dt_get_fdt_by_index((ulong) avb_dtbo->data, dtbo_index, &addr, &size)) {
+		printf("ANDROID: dt index %" PRIu32 " not found\n", dtbo_index);
 		return -EFAULT;
 	}
-	if (*size > FDT_MAX_SIZE) {
-		printf("ANDROID: dt index %" PRIu32" too large: %" PRIu32 " > %" PRIu32 "\n", DTBO_INDEX, *size, FDT_MAX_SIZE);
+	if (size > FDT_MAX_SIZE) {
+		printf("ANDROID: dt index %" PRIu32" too large: %" PRIu32 " > %" PRIu32 "\n", dtbo_index, size, FDT_MAX_SIZE);
 		return -EFAULT;
 	}
+	printf("ANDROID: load dtb to            0x%08lx, size %" PRIu32 "\n", loadaddr, size);
+	memcpy((void *) loadaddr, (void *) addr, size);
+
 	return 0;
 }
 
@@ -177,8 +212,6 @@ static int load_android(AvbSlotVerifyData* avb_data)
 	AvbPartitionData *avb_boot = NULL;
 	AvbPartitionData *avb_vendor = NULL;
 	AvbPartitionData *avb_dtbo = NULL;
-	ulong addr = 0;
-	u32 size = 0;
 	int r = 0;
 
 	if ((avb_boot = get_avb_part(avb_data, "boot")) == NULL)
@@ -197,32 +230,18 @@ static int load_android(AvbSlotVerifyData* avb_data)
 		return -EFAULT;
 	}
 
-	if (!hdr_v3->kernel_size || !image_arm64((void *)((ulong) hdr_v3 + 4096))) {
-		printf("ANDROID: invalid kernel image\n");
-		return -EFAULT;
-	}
-	printf("ANDROID: load kernel to         0x%08" PRIx32 ", size: %" PRIu32 "\n", vendor_hdr_v3->kernel_addr, hdr_v3->kernel_size);
-	memcpy((void*) (ulong) vendor_hdr_v3->kernel_addr, (void*) ((ulong) hdr_v3 + 4096), hdr_v3->kernel_size);
-
-	if (vendor_hdr_v3->vendor_ramdisk_size) {
-		printf("ANDROID: load vendor ramdisk to 0x%08" PRIx32 ", size: %" PRIu32 "\n", vendor_hdr_v3->ramdisk_addr, vendor_hdr_v3->vendor_ramdisk_size);
-		const ulong vendor_ramdisk_start = (ulong) vendor_hdr_v3 + ALIGN(sizeof(struct vendor_boot_img_hdr_v3), vendor_hdr_v3->page_size);
-		memcpy((void*) (ulong) vendor_hdr_v3->ramdisk_addr, (void*) vendor_ramdisk_start, vendor_hdr_v3->vendor_ramdisk_size);
-	}
-
-	if (hdr_v3->ramdisk_size) {
-		const uint32_t ramdisk_loadaddr = (uint32_t) vendor_hdr_v3->ramdisk_addr + vendor_hdr_v3->vendor_ramdisk_size;
-		printf("ANDROID: load boot ramdisk to   0x%08" PRIx32 ", size: %" PRIu32 "\n", ramdisk_loadaddr, hdr_v3->ramdisk_size);
-		const ulong ramdisk_start = (ulong) hdr_v3 + 4096 + ALIGN(hdr_v3->kernel_size, 4096);
-		memcpy((void*) (ulong) ramdisk_loadaddr, (void*) ramdisk_start, hdr_v3->ramdisk_size);
-	}
-
-	r = find_fdt(avb_dtbo, &addr, &size);
+	r = load_kernel(hdr_v3, vendor_hdr_v3);
 	if (r)
 		return r;
+
+	r = load_ramdisk(hdr_v3, vendor_hdr_v3);
+	if (r)
+		return r;
+
 	const ulong fdt_addr = (ulong) vendor_hdr_v3->kernel_addr + MAX_KERNEL_LEN;
-	printf("ANDROID: load dtb to            0x%08lx, size %" PRIu32 "\n", addr, size);
-	memcpy((void *) fdt_addr, (void *) addr, size);
+	r = load_fdt(avb_dtbo, DTBO_INDEX, fdt_addr);
+	if (r)
+		return r;
 
 	/* set cmdline */
 	android_image_get_kernel_v3(hdr_v3, vendor_hdr_v3);
