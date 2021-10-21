@@ -9,6 +9,9 @@
 #include <linux/sizes.h>
 #include <asm/arch/imx-regs.h>
 
+#define STR(a) __STR(a)
+#define __STR(a) #a
+
 /* SPL */
 #define CONFIG_SPL_MAX_SIZE		(148 * 1024)
 #ifdef CONFIG_SPL_BUILD
@@ -99,8 +102,11 @@
 #undef CONFIG_BOOTCOMMAND
 #define CONFIG_BOOTCOMMAND \
 	"echo starting boot procedure...;" \
+	"if is_usb_boot; then " \
+		"echo Booting through SDP -- enable fastboot;" \
+		"fastboot "STR(CONFIG_FASTBOOT_USB_DEV)";" \
+	"fi;" \
 	"android_boot;"
-#define is_boot_from_usb is_usb_boot
 #define CONFIG_SYSTEM_RAMDISK_SUPPORT
 #endif
 

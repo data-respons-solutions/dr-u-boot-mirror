@@ -250,3 +250,14 @@ U_BOOT_CMD(
 	"Validate AVB\n"
 	"Boot\n"
 );
+
+static int do_is_usb_boot(cmd_tbl_t *cmdtp, int flag, int argc,
+			char * const argv[])
+{
+	return is_usb_boot() ? CMD_RET_SUCCESS : CMD_RET_FAILURE;
+}
+
+U_BOOT_CMD(
+	is_usb_boot, 1, 0, do_is_usb_boot, "usb boot?",
+	"Return true if booted from usb\n"
+);
