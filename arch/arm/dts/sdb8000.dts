@@ -46,7 +46,7 @@
 	phy-reset-post-delay = <10>;
 	phy-reset-duration = <10>;
 	fsl,magic-packet;
-	status = "okay";
+	status = "disabled";
 
 	mdio {
 		#address-cells = <1>;
