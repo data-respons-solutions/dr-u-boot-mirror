@@ -250,15 +250,44 @@ static int load_dram_timing(struct dram_timing_info* dram_timing, const struct l
 	return 0;
 }
 
+static int load_nvram_section(struct spi_flash *flash, size_t offset, size_t size, struct libnvram_header* hdr, uint8_t** data)
+{
+	const uint32_t hdr_len = libnvram_header_len();
+	if (hdr_len > size)
+		return -EINVAL;
+
+	uint8_t hdr_buf[hdr_len];
+	int r = spi_flash_read(flash, offset, hdr_len, hdr_buf);
+	if (r) {
+		printf("dram_timing: SPI failed reading: %d\n", r);
+		return r;
+	}
+
+	r = libnvram_validate_header(hdr_buf, hdr_len, hdr);
+	if (r) {
+		printf("dram_timing: failed validating header: %d\n", r);
+		return r;
+	}
+	if ((hdr->len + hdr_len) > size)
+		return -EINVAL;
+
+	*data = malloc_simple(hdr->len);
+	if (!(*data))
+			return -ENOMEM;
+
+	r = spi_flash_read(flash, offset + hdr_len, hdr->len, *data);
+	if (r) {
+		printf("dram_timing: SPI failed reading data: %d\n", r);
+		return r;
+	}
+
+	return 0;
+}
+
 int load_dram_timing_spi(struct dram_timing_info* dram_timing)
 {
 	struct spi_flash *flash = NULL;
-	const uint32_t hdr_len = libnvram_header_len();
 	int r = 0;
-
-	if (hdr_len > CONFIG_DR_NVRAM_PLATFORM_SIZE)
-		return -EINVAL;
-
 	flash = spi_flash_probe(CONFIG_SF_DEFAULT_BUS, CONFIG_SF_DEFAULT_CS,
 			CONFIG_SF_DEFAULT_SPEED, CONFIG_SF_DEFAULT_MODE);
 
@@ -266,34 +295,33 @@ int load_dram_timing_spi(struct dram_timing_info* dram_timing)
 		printf("dram_timing: SPI probe failed\n");
 		return -ENODEV;
 	}
-	uint8_t *hdr_buf = malloc_simple(hdr_len);
-	if (!hdr_buf)
-		return -ENOMEM;
 
-	r = spi_flash_read(flash, CONFIG_DR_NVRAM_PLATFORM_OFFSET, hdr_len, hdr_buf);
-	if (r) {
-		printf("dram_timing: SPI failed reading header: %d\n", r);
+	struct libnvram_header ptr_hdr;
+	uint8_t* ptr_data = NULL;
+	r = load_nvram_section(flash, CONFIG_DR_NVRAM_PLATFORM_OFFSET, CONFIG_DR_NVRAM_PLATFORM_SIZE, &ptr_hdr, &ptr_data);
+	if (r)
 		return r;
-	}
 
-	struct libnvram_header hdr;
-	r = libnvram_validate_header(hdr_buf, hdr_len, &hdr);
-	if (r) {
-		printf("dram_timing: failed validating header: %d\n", r);
+	/* Find ddr-timing entry offset */
+	struct libnvram_entry entry;
+	struct input_data in;
+	in.begin = libnvram_it_begin(ptr_data, ptr_hdr.len, &ptr_hdr);
+	in.end = libnvram_it_end(ptr_data, ptr_hdr.len, &ptr_hdr);
+	r = find_key(&entry, "ddr-timing", &in);
+	if (r)
 		return r;
-	}
-	if ((hdr.len + hdr_len) > CONFIG_DR_NVRAM_PLATFORM_SIZE)
+
+	if (entry.value_len != 4)
+		return -EINVAL;
+	const uint32_t timing_offset = libnvram_header_len() + ptr_hdr.len + letou32(entry.value);
+	if (timing_offset > CONFIG_DR_NVRAM_PLATFORM_SIZE)
 		return -EINVAL;
 
-	uint8_t *data_buf = malloc_simple(hdr.len);
-	if (!data_buf)
-			return -ENOMEM;
-
-	r = spi_flash_read(flash, CONFIG_DR_NVRAM_PLATFORM_OFFSET + hdr_len, hdr.len, data_buf);
-	if (r) {
-		printf("dram_timing: SPI failed reading data: %d\n", r);
+	struct libnvram_header timing_hdr;
+	uint8_t* timing_data = NULL;
+	r = load_nvram_section(flash, CONFIG_DR_NVRAM_PLATFORM_OFFSET + timing_offset, CONFIG_DR_NVRAM_PLATFORM_SIZE - timing_offset, &timing_hdr, &timing_data);
+	if (r)
 		return r;
-	}
 
-	return load_dram_timing(dram_timing, &hdr, data_buf, hdr.len);
+	return load_dram_timing(dram_timing, &timing_hdr, timing_data, timing_hdr.len);
 }
