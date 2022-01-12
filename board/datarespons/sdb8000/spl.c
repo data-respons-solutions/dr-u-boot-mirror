@@ -189,13 +189,11 @@ int board_early_init_f(void)
 void spl_ddr_init(void)
 {
 	struct dram_timing_info spi_dram_timing;
-	if (load_dram_timing_spi(&spi_dram_timing) == 0) {
-		ddr_init(&spi_dram_timing);
+	if (load_dram_timing_spi(&spi_dram_timing) != 0) {
+		puts("ddr init failed!\n");
+		reset_cpu(WDOG1_BASE_ADDR);
 	}
-	else {
-		printf("Fallback -- hard-coded ddr timing\n");
-		ddr_init(&dram_timing);
-	}
+	ddr_init(&spi_dram_timing);
 }
 
 void board_init_f(ulong dummy)
