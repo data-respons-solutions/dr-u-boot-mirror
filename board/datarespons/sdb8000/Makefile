@@ -7,6 +7,6 @@
 ifdef CONFIG_SPL_BUILD
 obj-y += spl.o dram_timing_spi.o
 else
-obj-y += sdb8000.o
+obj-y += sdb8000.o system_boot.o
 obj-$(CONFIG_ANDROID_SUPPORT) += android_boot.o
 endif
