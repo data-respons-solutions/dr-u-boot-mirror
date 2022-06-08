@@ -122,11 +122,6 @@ int power_init_board(void)
 	return 0;
 }
 
-void spl_board_init(void)
-{
-
-}
-
 int board_fit_config_name_match(const char *name)
 {
 	return 0;
@@ -191,7 +186,7 @@ void spl_ddr_init(void)
 	struct dram_timing_info spi_dram_timing;
 	if (load_dram_timing_spi(&spi_dram_timing) != 0) {
 		puts("ddr init failed!\n");
-		reset_cpu(WDOG1_BASE_ADDR);
+		hang();
 	}
 	ddr_init(&spi_dram_timing);
 }
@@ -227,13 +222,4 @@ void board_init_f(ulong dummy)
 	spl_ddr_init();
 
 	board_init_r(NULL, 0);
-}
-
-int do_reset(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
-{
-	puts ("resetting ...\n");
-
-	reset_cpu(WDOG1_BASE_ADDR);
-
-	return 0;
 }
