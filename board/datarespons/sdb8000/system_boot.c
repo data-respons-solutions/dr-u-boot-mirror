@@ -175,7 +175,7 @@ static int load_fit(const char* interface, int device, int part, const char* lab
 		return -ENOMEM;
 	strcpy(cmdline, root_partuuid);
 	strcat(cmdline, part_info.uuid);
-	r = env_set("cmdline", cmdline);
+	r = env_set("bootargs", cmdline);
 	free(cmdline);
 	if (r)
 		return -ENOMEM;
@@ -183,14 +183,15 @@ static int load_fit(const char* interface, int device, int part, const char* lab
 	return 0;
 }
 
-static int boot_fit(void)
+/* fit_conf: Optionally override nvram SYS_FIT_CONF */
+static int boot_fit(const char* fit_conf)
 {
 	/* Build bootm args -- 0x[FIT_ADDR]#[CONFIG] */
 	char fit_addr[17];
 	sprintf(fit_addr, "%lx", (unsigned long) FIT_ADDR);
 	int arglen = strlen(fit_addr) + 1;
 	/* check optional config */
-	const char *conf = nvram_get(sys_fit_conf);
+	const char *conf = fit_conf ? fit_conf : nvram_get(sys_fit_conf);
 	if (conf) {
 		/*     += # + conf */
 		arglen += 1 + strlen(conf);
@@ -198,14 +199,13 @@ static int boot_fit(void)
 	char *arg = malloc(arglen);
 	if (!arg)
 		return -ENOMEM;
-	strcat(arg, fit_addr);
+	strcpy(arg, fit_addr);
 	if (conf) {
 		strcat(arg, "#");
 		strcat(arg, conf);
 	}
 	char *boot_args[] = {"bootm", arg};
 	do_bootm(NULL, 0, 2, boot_args);
-
 	if (conf) {
 		/* If we're here the fit config might not have been found.
 		 * Make an attempt with default config */
@@ -229,9 +229,9 @@ static int do_system_boot(cmd_tbl_t *cmdtp, int flag, int argc,
 	const char *interface = argv[1];
 	char *ep = NULL;
 	const int device = simple_strtoul(argv[2], &ep, 10);
-
 	char* rootfs_label = NULL;
 	int partnr = -1;
+	char* fit_conf = NULL;
 	if (argc > 3) {
 		for (int i = 3; i < argc; ++i) {
 			if (strcmp(argv[i], "--label") == 0) {
@@ -244,6 +244,13 @@ static int do_system_boot(cmd_tbl_t *cmdtp, int flag, int argc,
 				if (argc < ++i)
 					return CMD_RET_USAGE;
 				partnr = simple_strtoul(argv[i], &ep, 10);
+			}
+			else
+			if (strcmp(argv[i], "--conf") == 0) {
+				if (argc < ++i)
+					return CMD_RET_USAGE;
+				fit_conf = argv[i];
+
 			}
 			else {
 				return CMD_RET_USAGE;
@@ -265,7 +272,7 @@ static int do_system_boot(cmd_tbl_t *cmdtp, int flag, int argc,
 		return CMD_RET_FAILURE;
 	}
 
-	r = boot_fit();
+	r = boot_fit(fit_conf);
 	if (r) {
 		printf("BOOT: failed booting image [%d]: %s\n", r, errno_str(r));
 		return CMD_RET_FAILURE;
@@ -280,4 +287,5 @@ U_BOOT_CMD(
 	"Args:\n"
 	"  --label   -- gpt label of root partition, disables root swap\n"
 	"  --part    -- partition index of root partition, disables root swap\n"
+	"  --conf    -- fit config, overrides nvram SYS_FIT_CONF\n"
 );
