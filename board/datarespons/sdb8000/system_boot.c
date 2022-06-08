@@ -8,20 +8,10 @@
 #include <fs.h>
 #include "../common/include/nvram.h"
 
-
-/* Depends:
- * SYS_BOOT_DEV --> boot device num
- * SYS_BOOT_IFACE --> boot iface
- */
-
-#define FIT_IMAGE "/boot/fitImage"
-
-
 static const char* sys_boot_part = "SYS_BOOT_PART";
 static const char* sys_boot_swap = "SYS_BOOT_SWAP";
 static const char* sys_boot_attempts = "SYS_BOOT_ATTEMPTS";
 static const char* sys_fit_conf = "SYS_FIT_CONF";
-
 static const char* syslabel_default = "rootfs1";
 
 
@@ -218,8 +208,8 @@ static int boot_fit(const char* fit_conf)
 	return -EFAULT;
 }
 
-static int do_system_boot(cmd_tbl_t *cmdtp, int flag, int argc,
-			char * const argv[])
+static int do_system_load(cmd_tbl_t *cmdtp, int flag, int argc,
+		char * const argv[])
 {
 	int r = 0;
 
@@ -231,7 +221,6 @@ static int do_system_boot(cmd_tbl_t *cmdtp, int flag, int argc,
 	const int device = simple_strtoul(argv[2], &ep, 10);
 	char* rootfs_label = NULL;
 	int partnr = -1;
-	char* fit_conf = NULL;
 	if (argc > 3) {
 		for (int i = 3; i < argc; ++i) {
 			if (strcmp(argv[i], "--label") == 0) {
@@ -244,13 +233,6 @@ static int do_system_boot(cmd_tbl_t *cmdtp, int flag, int argc,
 				if (argc < ++i)
 					return CMD_RET_USAGE;
 				partnr = simple_strtoul(argv[i], &ep, 10);
-			}
-			else
-			if (strcmp(argv[i], "--conf") == 0) {
-				if (argc < ++i)
-					return CMD_RET_USAGE;
-				fit_conf = argv[i];
-
 			}
 			else {
 				return CMD_RET_USAGE;
@@ -272,20 +254,45 @@ static int do_system_boot(cmd_tbl_t *cmdtp, int flag, int argc,
 		return CMD_RET_FAILURE;
 	}
 
-	r = boot_fit(fit_conf);
-	if (r) {
-		printf("BOOT: failed booting image [%d]: %s\n", r, errno_str(r));
-		return CMD_RET_FAILURE;
-	}
-
 	return CMD_RET_SUCCESS;
 }
 
 U_BOOT_CMD(
-	system_boot, 7, 1, do_system_boot, "Boot system (linux)",
-	"system_boot interface device [args]   -- Boot with root swap support\n"
+	system_load, 7, 1, do_system_load, "Load bootable linux to memory",
+	"system_load interface device [args]   -- With root swap support\n"
+	"  Note: Increments root swap attempts variable if swap in progress\n"
 	"Args:\n"
 	"  --label   -- gpt label of root partition, disables root swap\n"
 	"  --part    -- partition index of root partition, disables root swap\n"
+);
+
+static int do_system_boot(cmd_tbl_t *cmdtp, int flag, int argc,
+			char * const argv[])
+{
+	int r = 0;
+	char* fit_conf = NULL;
+	if (argc > 1) {
+		for (int i = 3; i < argc; ++i) {
+			if (strcmp(argv[i], "--conf") == 0) {
+				if (argc < ++i)
+					return CMD_RET_USAGE;
+				fit_conf = argv[i];
+
+			}
+			else {
+				return CMD_RET_USAGE;
+			}
+		}
+	}
+
+	r = boot_fit(fit_conf);
+	printf("BOOT: failed booting image [%d]: %s\n", r, errno_str(r));
+	return CMD_RET_FAILURE;
+}
+
+U_BOOT_CMD(
+	system_boot, 3, 1, do_system_boot, "Boot linux system",
+	"system_boot [args]     -- Boot loaded image\n"
+	"Args:\n"
 	"  --conf    -- fit config, overrides nvram SYS_FIT_CONF\n"
 );
