@@ -113,25 +113,48 @@ static int nvram_root_swap(char** rootfs_label)
 	return 0;
 }
 
-static int load_fit(const char* label)
+/*
+ * Find correct partition by either index (int part) or label (const char* label).
+ * part = -1 -> disable
+ * label = NULL -> disable
+ * */
+static int load_fit(const char* interface, int device, int part, const char* label)
 {
-	/* Find partition */
-	printf("BOOT: partition \"%s\" on device %s %d\n", label, SYS_BOOT_IFACE, SYS_BOOT_DEV);
-	struct blk_desc* dev = blk_get_dev(SYS_BOOT_IFACE, SYS_BOOT_DEV);
+	int r = 0;
+
+	/* Find device */
+	struct blk_desc* dev = blk_get_dev(interface, device);
 	if (!dev) {
-		printf("BOOT: failed getting device\n");
+		printf("BOOT: failed getting device %s %d\n", interface, device);
 		return -EFAULT;
 	}
+
+	/* Find partition */
 	disk_partition_t part_info;
-	const int partnr = part_get_info_by_name(dev, label, &part_info);
-	if (partnr < 1) {
-		printf("BOOT: failed getting partition\n");
+	int partnr = -1;
+	/* Search by label first, if provided */
+	if (label) {
+		partnr = part_get_info_by_name(dev, label, &part_info);
+	}
+	/* If not found, search by partition index, if provided */
+	if (partnr == -1 && part != -1) {
+		r = part_get_info(dev, part, &part_info);
+		if (!r) {
+			partnr = part;
+		}
+	}
+	if (partnr != -1) {
+		printf("BOOT: %s %d:%d#\"%s\": %s\n", interface, device, partnr, part_info.name, part_info.uuid);
+	}
+	else {
+		printf("BOOT: failed finding boot partition on %s %d%s%s%s%s\n", interface, device,
+				part != -1 ? ":" : "", part != -1 ? simple_itoa(part) : "",
+				label ? "#" : "", label ? label : "");
 		return -EFAULT;
 	}
-	printf("BOOT: partition uuid: %s\n", part_info.uuid);
 
 	/* Read image */
-	int r = fs_set_blk_dev_with_part(dev, partnr);
+	r = fs_set_blk_dev_with_part(dev, partnr);
 	if (r) {
 		printf("BOOT: failed setting fs pointer\n");
 		return -EFAULT;
@@ -150,7 +173,7 @@ static int load_fit(const char* label)
 	char *cmdline = malloc(cmdline_size);
 	if (!cmdline)
 		return -ENOMEM;
-	strcat(cmdline, root_partuuid);
+	strcpy(cmdline, root_partuuid);
 	strcat(cmdline, part_info.uuid);
 	r = env_set("cmdline", cmdline);
 	free(cmdline);
@@ -183,10 +206,12 @@ static int boot_fit(void)
 	char *boot_args[] = {"bootm", arg};
 	do_bootm(NULL, 0, 2, boot_args);
 
-	/* If we're here the fit config might not have been found.
-	 * Make an attempt with default config */
-	strcpy(arg, fit_addr);
-	do_bootm(NULL, 0, 2, boot_args);
+	if (conf) {
+		/* If we're here the fit config might not have been found.
+		 * Make an attempt with default config */
+		strcpy(arg, fit_addr);
+		do_bootm(NULL, 0, 2, boot_args);
+	}
 
 	/* Shouldn't be here -- boot failed */
 	free(arg);
@@ -197,29 +222,62 @@ static int do_system_boot(cmd_tbl_t *cmdtp, int flag, int argc,
 			char * const argv[])
 {
 	int r = 0;
+
+	if (argc < 3)
+		return CMD_RET_USAGE;
+
+	const char *interface = argv[1];
+	char *ep = NULL;
+	const int device = simple_strtoul(argv[2], &ep, 10);
+
 	char* rootfs_label = NULL;
-	r = nvram_root_swap(&rootfs_label);
-	if (r) {
-		printf("BOOT: no rootfs label found [%d]: %s\n", r, errno_str(r));
-		return r;
+	int partnr = -1;
+	if (argc > 3) {
+		for (int i = 3; i < argc; ++i) {
+			if (strcmp(argv[i], "--label") == 0) {
+				if (argc < ++i)
+					return CMD_RET_USAGE;
+				rootfs_label = argv[i];
+			}
+			else
+			if (strcmp(argv[i], "--part") == 0) {
+				if (argc < ++i)
+					return CMD_RET_USAGE;
+				partnr = simple_strtoul(argv[i], &ep, 10);
+			}
+			else {
+				return CMD_RET_USAGE;
+			}
+		}
 	}
 
-	r = load_fit(rootfs_label);
+	if (!rootfs_label && partnr == -1) {
+		r = nvram_root_swap(&rootfs_label);
+		if (r) {
+			printf("BOOT: no rootfs label found [%d]: %s\n", r, errno_str(r));
+			return CMD_RET_FAILURE;
+		}
+	}
+
+	r = load_fit(interface, device, partnr, rootfs_label);
 	if (r) {
 		printf("BOOT: failed loading image [%d]: %s\n", r, errno_str(r));
-		return r;
+		return CMD_RET_FAILURE;
 	}
 
 	r = boot_fit();
 	if (r) {
 		printf("BOOT: failed booting image [%d]: %s\n", r, errno_str(r));
-		return r;
+		return CMD_RET_FAILURE;
 	}
 
 	return CMD_RET_SUCCESS;
 }
 
 U_BOOT_CMD(
-	system_boot, 1, 0, do_system_boot, "Boot system (linux)",
-	"With root swap\n"
+	system_boot, 7, 1, do_system_boot, "Boot system (linux)",
+	"system_boot interface device [args]   -- Boot with root swap support\n"
+	"Args:\n"
+	"  --label   -- gpt label of root partition, disables root swap\n"
+	"  --part    -- partition index of root partition, disables root swap\n"
 );
