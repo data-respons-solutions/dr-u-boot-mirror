@@ -168,7 +168,7 @@ static int load_fit(const char* interface, int device, int part, const char* lab
 	}
 
 	/* Set kernel cmdline */
-	const char *root_partuuid = "root=PARTUUID=";
+	const char *root_partuuid = "rootwait root=PARTUUID=";
 	const int cmdline_size = strlen(root_partuuid) + strlen(part_info.uuid) + 1;
 	char *cmdline = malloc(cmdline_size);
 	if (!cmdline)
