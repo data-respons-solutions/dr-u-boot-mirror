@@ -112,17 +112,4 @@
 #define CONFIG_MXC_USB_PORTSC  (PORT_PTS_UTMI | PORT_PTS_PTW)
 #define CONFIG_USB_MAX_CONTROLLER_COUNT 2
 
-/* Android */
-#ifdef CONFIG_ANDROID_SUPPORT
-#undef CONFIG_BOOTCOMMAND
-#define CONFIG_BOOTCOMMAND \
-	"echo starting boot procedure...;" \
-	"if is_usb_boot; then " \
-		"echo Booting through SDP -- enable fastboot;" \
-		"fastboot "STR(CONFIG_FASTBOOT_USB_DEV)";" \
-	"fi;" \
-	"android_boot;"
-#define CONFIG_SYSTEM_RAMDISK_SUPPORT
-#endif
-
 #endif // __SDB8000_H
