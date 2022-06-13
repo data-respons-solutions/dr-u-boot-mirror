@@ -4,6 +4,7 @@
  */
 #include <common.h>
 #include <miiphy.h>
+#include <usb.h>
 #include <netdev.h>
 #include <asm/mach-imx/iomux-v3.h>
 #include <asm/arch/imx8mm_pins.h>
@@ -89,3 +90,9 @@ boot_metric metrics = {
   .odt	 = 0,
   .sw	 = 0
 };
+
+/* Always enable fastboot when booting from USB SDP */
+int board_ehci_usb_phy_mode(struct udevice *dev)
+{
+	return is_usb_boot() ? USB_INIT_DEVICE : USB_INIT_HOST;
+}
