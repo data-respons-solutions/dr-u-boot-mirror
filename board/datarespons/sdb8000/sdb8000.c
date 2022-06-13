@@ -6,6 +6,7 @@
 #include <miiphy.h>
 #include <usb.h>
 #include <netdev.h>
+#include <part.h>
 #include <asm/mach-imx/iomux-v3.h>
 #include <asm/arch/imx8mm_pins.h>
 #include <asm/arch/clock.h>
@@ -102,8 +103,28 @@ static int do_is_usb_boot(cmd_tbl_t *cmdtp, int flag, int argc,
 {
 	return is_usb_boot() ? CMD_RET_SUCCESS : CMD_RET_FAILURE;
 }
-
 U_BOOT_CMD(
 	is_usb_boot, 1, 0, do_is_usb_boot, "usb boot?",
 	"Return true if booted from usb\n"
 );
+
+static int do_is_android_system(cmd_tbl_t *cmdtp, int flag, int argc,
+		char * const argv[])
+{
+	struct blk_desc *dev = NULL;
+	disk_partition_t part;
+	int r = 0;
+
+	dev = blk_get_dev(SYS_BOOT_IFACE, SYS_BOOT_DEV);
+	if (dev) {
+		r = part_get_info_by_name(dev, "misc", &part);
+		if (r > 0)
+			return CMD_RET_SUCCESS;
+	}
+	return CMD_RET_FAILURE;
+}
+U_BOOT_CMD(
+	is_android_system, 1, 0, do_is_android_system, "Android on emmc?",
+	"Return true if android on emmc\n"
+);
+

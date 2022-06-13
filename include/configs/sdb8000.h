@@ -60,6 +60,10 @@
 			"usb stop;" \
 		"fi;" \
 	"fi;" \
+	"if is_android_system; then " \
+		"echo Detected android on emmc;" \
+		"android_boot;" \
+	"fi;" \
 	"if system_load mmc 2; then " \
 		"system_boot;" \
 	"fi;" \
