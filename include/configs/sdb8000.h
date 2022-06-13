@@ -48,6 +48,10 @@
 
 #define CONFIG_BOOTCOMMAND \
 	"echo starting boot procedure...;" \
+	"if is_usb_boot; then " \
+		"echo USB SDP boot. Entering fastboot...;" \
+		"fastboot "STR(CONFIG_FASTBOOT_USB_DEV)";" \
+	"fi;" \
 	"if usb start; then " \
 		"if system_load usb 0 --label TESTDRIVE; then " \
 			"usb stop;" \

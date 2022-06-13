@@ -96,3 +96,14 @@ int board_ehci_usb_phy_mode(struct udevice *dev)
 {
 	return is_usb_boot() ? USB_INIT_DEVICE : USB_INIT_HOST;
 }
+
+static int do_is_usb_boot(cmd_tbl_t *cmdtp, int flag, int argc,
+			char * const argv[])
+{
+	return is_usb_boot() ? CMD_RET_SUCCESS : CMD_RET_FAILURE;
+}
+
+U_BOOT_CMD(
+	is_usb_boot, 1, 0, do_is_usb_boot, "usb boot?",
+	"Return true if booted from usb\n"
+);
