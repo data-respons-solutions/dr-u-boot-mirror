@@ -30,6 +30,8 @@
 		off-on-delay-us = <20000>;
 		enable-active-high;
 	};
+
+	con_usb_otg1: dummy_usb_otg1_con {};
 };
 
 &A53_0 {
@@ -226,8 +228,10 @@
 };
 
 &usbotg1 {
+
 	dr_mode = "host";
 	vbus-supply = <&reg_usb_otg1>;
+	extcon = <&con_usb_otg1>;
 	status = "okay";
 };
 
