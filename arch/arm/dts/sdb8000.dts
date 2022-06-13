@@ -29,7 +29,6 @@
 		gpio = <&gpio3 21 GPIO_ACTIVE_HIGH>;
 		off-on-delay-us = <20000>;
 		enable-active-high;
-		regulator-always-on;
 	};
 };
 
