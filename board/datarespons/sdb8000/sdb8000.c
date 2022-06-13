@@ -9,6 +9,7 @@
 #include <asm/arch/imx8mm_pins.h>
 #include <asm/arch/clock.h>
 #include <asm/arch/sys_proto.h>
+#include <android_image.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -70,3 +71,21 @@ int board_init(void)
 
 	return 0;
 }
+
+/* Android specfics */
+/* Map u-boot mmc device index to kernel block device index */
+int mmc_map_to_kernel_blk(int dev_no)
+{
+	return dev_no;
+}
+
+/* Boot metric variables */
+boot_metric metrics = {
+  .bll_1 = 0,
+  .ble_1 = 0,
+  .kl	 = 0,
+  .kd	 = 0,
+  .avb	 = 0,
+  .odt	 = 0,
+  .sw	 = 0
+};
