@@ -67,7 +67,8 @@
 	"if system_load mmc 2; then " \
 		"system_boot;" \
 	"fi;" \
-	"echo no boot device found;"
+	"echo no boot device found;" \
+	"reset;"
 
 /* memory */
 #define CONFIG_SYS_SDRAM_BASE		0x40000000
