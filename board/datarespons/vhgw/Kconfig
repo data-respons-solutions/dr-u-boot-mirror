@@ -1,0 +1,20 @@
+if TARGET_VHGW
+
+config SYS_BOARD
+	default "vhgw"
+
+config SYS_VENDOR
+	default "datarespons"
+
+config SYS_CONFIG_NAME
+	default "vhgw"
+
+config IMX8MN_LOW_DRIVE_MODE
+	bool "Enable the low drive mode of iMX8MN on EVK board"
+
+config IMX_CONFIG
+	default "board/datarespons/vhgw/imximage-8mn-ddr4.cfg"
+
+source "board/datarespons/common/Kconfig"
+
+endif
