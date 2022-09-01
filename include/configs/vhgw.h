@@ -26,16 +26,6 @@
 /* For RAW image gives a error info not panic */
 #define CONFIG_SPL_ABORT_ON_RAW_IMAGE
 
-#if defined(CONFIG_NAND_BOOT)
-#define CONFIG_SPL_NAND_BASE
-#define CONFIG_SPL_NAND_IDENT
-#define CONFIG_SYS_NAND_U_BOOT_OFFS 	0x4000000 /* Put the FIT out of first 64MB boot area */
-
-/* Set a redundant offset in nand FIT mtdpart. The new uuu will burn full boot image (not only FIT part) to the mtdpart, so we check both two offsets */
-#define CONFIG_SYS_NAND_U_BOOT_OFFS_REDUND \
-	(CONFIG_SYS_NAND_U_BOOT_OFFS + CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_SECTOR * 512 - 0x8400)
-#endif
-
 #endif
 
 #define CONFIG_CMD_READ
