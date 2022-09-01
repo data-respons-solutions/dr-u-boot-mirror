@@ -38,9 +38,6 @@ DECLARE_GLOBAL_DATA_PTR;
 
 int spl_board_boot_device(enum boot_device boot_dev_spl)
 {
-#ifdef CONFIG_SPL_BOOTROM_SUPPORT
-	return BOOT_DEVICE_BOOTROM;
-#else
 	switch (boot_dev_spl) {
 	case SD1_BOOT:
 	case MMC1_BOOT:
@@ -50,16 +47,11 @@ int spl_board_boot_device(enum boot_device boot_dev_spl)
 	case SD3_BOOT:
 	case MMC3_BOOT:
 		return BOOT_DEVICE_MMC2;
-	case QSPI_BOOT:
-		return BOOT_DEVICE_NOR;
-	case NAND_BOOT:
-		return BOOT_DEVICE_NAND;
 	case USB_BOOT:
-		return BOOT_DEVICE_BOARD;
+		return BOOT_DEVICE_BOOTROM;
 	default:
 		return BOOT_DEVICE_NONE;
 	}
-#endif
 }
 
 void spl_dram_init(void)
@@ -162,6 +154,33 @@ int power_init_board(void)
 }
 #endif
 
+#define UART_PAD_CTRL	(PAD_CTL_DSE6 | PAD_CTL_FSEL1)
+#define WDOG_PAD_CTRL	(PAD_CTL_DSE6 | PAD_CTL_ODE | PAD_CTL_PUE | PAD_CTL_PE)
+
+static iomux_v3_cfg_t const uart_pads[] = {
+	IMX8MN_PAD_UART2_RXD__UART2_DCE_RX | MUX_PAD_CTRL(UART_PAD_CTRL),
+	IMX8MN_PAD_UART2_TXD__UART2_DCE_TX | MUX_PAD_CTRL(UART_PAD_CTRL),
+};
+
+static iomux_v3_cfg_t const wdog_pads[] = {
+	IMX8MN_PAD_GPIO1_IO02__WDOG1_WDOG_B  | MUX_PAD_CTRL(WDOG_PAD_CTRL),
+};
+
+int board_early_init_f(void)
+{
+	struct wdog_regs *wdog = (struct wdog_regs *)WDOG1_BASE_ADDR;
+
+	imx_iomux_v3_setup_multiple_pads(wdog_pads, ARRAY_SIZE(wdog_pads));
+
+	set_wdog_reset(wdog);
+
+	imx_iomux_v3_setup_multiple_pads(uart_pads, ARRAY_SIZE(uart_pads));
+
+	init_uart_clk(1);
+
+	return 0;
+}
+
 void spl_board_init(void)
 {
 	struct udevice *dev;
@@ -175,7 +194,6 @@ void spl_board_init(void)
 	puts("Normal Boot\n");
 }
 
-#ifdef CONFIG_SPL_LOAD_FIT
 int board_fit_config_name_match(const char *name)
 {
 	/* Just empty function now - can't decide what to choose */
@@ -183,7 +201,6 @@ int board_fit_config_name_match(const char *name)
 
 	return 0;
 }
-#endif
 
 void board_init_f(ulong dummy)
 {
@@ -224,18 +241,3 @@ void board_init_f(ulong dummy)
 
 	board_init_r(NULL, 0);
 }
-
-#ifdef CONFIG_SPL_MMC
-#define UBOOT_RAW_SECTOR_OFFSET 0x40
-unsigned long spl_mmc_get_uboot_raw_sector(struct mmc *mmc)
-{
-	u32 boot_dev = spl_boot_device();
-	switch (boot_dev) {
-		case BOOT_DEVICE_MMC1:
-			return CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_SECTOR;
-		case BOOT_DEVICE_MMC2:
-			return CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_SECTOR - UBOOT_RAW_SECTOR_OFFSET;
-	}
-	return CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_SECTOR;
-}
-#endif
