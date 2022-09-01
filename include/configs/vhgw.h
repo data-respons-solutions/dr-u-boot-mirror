@@ -56,6 +56,13 @@
 #define FIT_ADDR 0x43400000
 #define FIT_IMAGE "/boot/fitImage"
 
+
+/*
+ * Boot order:
+ * - USB partition with label TESTDRIVE
+ * - mmc2 partition with label rootfs1
+ *   NOTE: root swap disabled as label specified.
+ */
 #define CONFIG_BOOTCOMMAND \
 	"echo starting boot procedure...;" \
 	"if usb start; then " \
@@ -66,7 +73,7 @@
 			"usb stop;" \
 		"fi;" \
 	"fi;" \
-	"if system_load mmc 2; then " \
+	"if system_load mmc 2 --label rootfs1; then " \
 		"system_boot;" \
 	"fi;" \
 	"echo no boot device found;" \
