@@ -61,7 +61,6 @@
  * Boot order:
  * - USB partition with label TESTDRIVE
  * - mmc2 partition with label rootfs1
- *   NOTE: root swap disabled as label specified.
  */
 #define CONFIG_BOOTCOMMAND \
 	"echo starting boot procedure...;" \
@@ -73,11 +72,10 @@
 			"usb stop;" \
 		"fi;" \
 	"fi;" \
-	"if system_load mmc 2 --label rootfs1; then " \
+	"if system_load mmc 2; then " \
 		"system_boot;" \
 	"fi;" \
-	"echo no boot device found;" \
-	"reset;"
+	"echo no boot device found;"
 
 /* Initial environment variables */
 #define CONFIG_EXTRA_ENV_SETTINGS		\
@@ -96,12 +94,8 @@
 
 #define CONFIG_SYS_SDRAM_BASE           0x40000000
 #define PHYS_SDRAM                      0x40000000
+#define PHYS_SDRAM_SIZE					0x40000000 /* 1GB DDR */
 
-#ifdef CONFIG_TARGET_IMX8MN_DDR3_EVK
-#define PHYS_SDRAM_SIZE			0x40000000 /* 1GB DDR */
-#else
-#define PHYS_SDRAM_SIZE			0x80000000 /* 2GB DDR */
-#endif
 
 #define CONFIG_MXC_UART_BASE		UART2_BASE_ADDR
 
@@ -118,15 +112,6 @@
 
 #define CONFIG_SYS_FSL_USDHC_NUM	2
 #define CONFIG_SYS_FSL_ESDHC_ADDR	0
-
-#ifdef CONFIG_NAND_MXS
-#define CONFIG_CMD_NAND_TRIMFFS
-
-/* NAND stuff */
-#define CONFIG_SYS_MAX_NAND_DEVICE     1
-#define CONFIG_SYS_NAND_BASE           0x20000000
-#define CONFIG_SYS_NAND_USE_FLASH_BBT
-#endif /* CONFIG_NAND_MXS */
 
 /* USB configs */
 #ifndef CONFIG_SPL_BUILD
