@@ -64,6 +64,9 @@
  */
 #define CONFIG_BOOTCOMMAND \
 	"echo starting boot procedure...;" \
+	"i2c dev 1;" \
+	"i2c mw 0x50 0x23 0x77 1;" \
+	"sleep 1;" \
 	"if usb start; then " \
 		"if system_load usb 0 --label TESTDRIVE; then " \
 			"usb stop;" \
