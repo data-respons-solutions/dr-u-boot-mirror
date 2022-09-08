@@ -260,7 +260,8 @@
 		#address-cells = <1>;
 		#size-cells = <1>;
 		compatible = "jedec,spi-nor";
-		spi-max-frequency = <50000000>;
+		/* Unreliable communication at 50MHz, quite possibly due to soldered in wires, cap at 10MHz */
+		spi-max-frequency = <10000000>;
 
 		partitions {
 			compatible = "fixed-partitions";
