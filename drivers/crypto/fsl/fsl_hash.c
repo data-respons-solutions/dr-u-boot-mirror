@@ -182,11 +182,21 @@ int caam_hash(const unsigned char *pbuf, unsigned int buf_len,
 	uint32_t *desc;
 	unsigned int size;
 
+	/*
+	 * Issue discussed here:
+	 * https://lore.kernel.org/all/9fb8507f-9a5e-e53a-0d64-e4bcbb6663eb@denx.de/T/#m144218a20efc6491431a39e1bdb0bf2ff5e63ab3
+	 *
+	 * Not possible (?) to align all artifacts included in fit-image
+	 * with uboot-mkimage argument "-EB 0x40" as recommended above.
+	 * Only the first artifact will be correctly aligned.
+	 * The alignment doesn't seem to be a requirement. Remove for now.
+	 *
 	if (!IS_ALIGNED((uintptr_t)pbuf, ARCH_DMA_MINALIGN) ||
 	    !IS_ALIGNED((uintptr_t)pout, ARCH_DMA_MINALIGN)) {
 		puts("Error: Address arguments are not aligned\n");
 		return -EINVAL;
 	}
+	*/
 
 	debug("\ncaam hash\n");
 	desc = malloc_cache_aligned(sizeof(int) * MAX_CAAM_DESCSIZE);
