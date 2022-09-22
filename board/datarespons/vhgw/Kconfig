@@ -15,6 +15,9 @@ config IMX8MN_LOW_DRIVE_MODE
 config IMX_CONFIG
 	default "board/datarespons/vhgw/imximage-8mn-ddr4.cfg"
 
+config SYS_SPI_U_BOOT2_OFFS
+	hex "address of u-boot-second payload in SPI flash"
+
 source "board/datarespons/common/Kconfig"
 
 endif

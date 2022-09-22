@@ -308,6 +308,22 @@
 	u-boot,dm-spl;
 };
 
+&ecspi1 {
+	u-boot,dm-pre-reloc;
+};
+
+&flash0 {
+	u-boot,dm-pre-reloc;
+};
+
+&pinctrl_ecspi1 {
+	u-boot,dm-pre-reloc;
+};
+
+&spba1 {
+	u-boot,dm-pre-reloc;
+};
+
 &{/soc@0/bus@30800000/i2c@30a20000/pca9450@25} {
 	u-boot,dm-spl;
 };

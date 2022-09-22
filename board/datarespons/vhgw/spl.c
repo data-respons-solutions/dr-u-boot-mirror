@@ -20,7 +20,7 @@
 #include <asm/arch/sys_proto.h>
 #include <asm/mach-imx/boot_mode.h>
 #include <asm/arch/ddr.h>
-
+#include <spi_flash.h>
 #include <dm/uclass.h>
 #include <dm/device.h>
 #include <dm/uclass-internal.h>
@@ -39,19 +39,31 @@ DECLARE_GLOBAL_DATA_PTR;
 int spl_board_boot_device(enum boot_device boot_dev_spl)
 {
 	switch (boot_dev_spl) {
-	case SD1_BOOT:
-	case MMC1_BOOT:
-	case SD2_BOOT:
-	case MMC2_BOOT:
-		return BOOT_DEVICE_MMC1;
-	case SD3_BOOT:
-	case MMC3_BOOT:
-		return BOOT_DEVICE_MMC2;
+	case SPI_NOR_BOOT:
+		return BOOT_DEVICE_SPI;
 	case USB_BOOT:
 		return BOOT_DEVICE_BOOTROM;
 	default:
 		return BOOT_DEVICE_NONE;
 	}
+}
+
+/*
+ * u-boot image is stored in two flash sections for power fail safe updates. We avoid having to re-write spi
+ * loader by calling existing functions twice (board_boot_order()) and adjusting offset from here (spl_spi_get_uboot_offs()).
+ */
+void board_boot_order(u32 *spl_boot_list)
+{
+	spl_boot_list[0] = spl_boot_device();
+	spl_boot_list[1] = spl_boot_device();
+}
+unsigned int spl_spi_get_uboot_offs(struct spi_flash *flash)
+{
+	static int i = 0;
+	const unsigned int offs = i == 0 ? CONFIG_SYS_SPI_U_BOOT_OFFS : CONFIG_SYS_SPI_U_BOOT2_OFFS;
+	i++;
+	printf("SPI offs: 0x%x\n", offs);
+	return offs;
 }
 
 void spl_dram_init(void)
