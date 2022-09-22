@@ -12,9 +12,6 @@ config SYS_CONFIG_NAME
 config IMX8MN_LOW_DRIVE_MODE
 	bool "Enable the low drive mode of iMX8MN on EVK board"
 
-config IMX_CONFIG
-	default "board/datarespons/vhgw/imximage-8mn-ddr4.cfg"
-
 config SYS_SPI_U_BOOT2_OFFS
 	hex "address of u-boot-second payload in SPI flash"
 

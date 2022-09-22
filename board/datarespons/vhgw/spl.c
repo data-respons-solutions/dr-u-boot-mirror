@@ -5,12 +5,9 @@
  */
 
 #include <common.h>
-#include <command.h>
 #include <cpu_func.h>
 #include <hang.h>
-#include <image.h>
 #include <init.h>
-#include <log.h>
 #include <spl.h>
 #include <asm/global_data.h>
 #include <asm/io.h>
@@ -30,9 +27,6 @@
 #include <power/bd71837.h>
 #include <asm/mach-imx/gpio.h>
 #include <asm/mach-imx/mxc_i2c.h>
-#include <fsl_esdhc_imx.h>
-#include <mmc.h>
-#include <linux/delay.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
