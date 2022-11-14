@@ -9,9 +9,6 @@ config SYS_VENDOR
 config SYS_CONFIG_NAME
 	default "vhgw"
 
-config IMX8MN_LOW_DRIVE_MODE
-	bool "Enable the low drive mode of iMX8MN on EVK board"
-
 config SYS_SPI_U_BOOT2_OFFS
 	hex "address of u-boot-second payload in SPI flash"
 

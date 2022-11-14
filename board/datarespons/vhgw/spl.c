@@ -23,7 +23,6 @@
 #include <dm/uclass-internal.h>
 #include <dm/device-internal.h>
 #include <power/pmic.h>
-#include <power/pca9450.h>
 #include <power/bd71837.h>
 #include <asm/mach-imx/gpio.h>
 #include <asm/mach-imx/mxc_i2c.h>
@@ -65,19 +64,16 @@ void spl_dram_init(void)
 	ddr_init(&dram_timing);
 }
 
-#if CONFIG_IS_ENABLED(DM_PMIC_BD71837)
 int power_init_board(void)
 {
 	struct udevice *dev;
 	int ret;
 
-	ret = pmic_get("pmic@4b", &dev);
-	if (ret == -ENODEV) {
-		puts("No pmic@4b\n");
-		return 0;
-	}
-	if (ret != 0)
+	ret = pmic_get("bd71850@4b", &dev);
+	if (ret != 0) {
+		puts("No bd71850@4b\n");
 		return ret;
+	}
 
 	/* decrease RESET key long push time from the default 10s to 10ms */
 	pmic_reg_write(dev, BD718XX_PWRONCONFIG1, 0x0);
@@ -85,80 +81,20 @@ int power_init_board(void)
 	/* unlock the PMIC regs */
 	pmic_reg_write(dev, BD718XX_REGLOCK, 0x1);
 
-	/* Set VDD_ARM to typical value 0.85v for 1.2Ghz */
-	pmic_reg_write(dev, BD718XX_BUCK2_VOLT_RUN, 0xf);
+	/* Set VDD_SOC to typical 0.95v for 1,4GHz ARM and 1,6GHz LPDDR4 */
+	pmic_reg_write(dev, BD718XX_BUCK1_VOLT_RUN, 0x19);
 
-#ifdef CONFIG_IMX8MN_LOW_DRIVE_MODE
-	/* Set VDD_SOC/VDD_DRAM to typical value 0.8v for low drive mode */
-	pmic_reg_write(dev, BD718XX_BUCK1_VOLT_RUN, 0xa);
-#else
-	/* Set VDD_SOC/VDD_DRAM to typical value 0.85v for nominal mode */
-	pmic_reg_write(dev, BD718XX_BUCK1_VOLT_RUN, 0xf);
-#endif /* CONFIG_IMX8MN_LOW_DRIVE_MODE */
+	/* Disable unused BUCK2 */
+	pmic_reg_write(dev, BD718XX_BUCK2_CTRL, 0x42);
 
-	/* Set VDD_SOC 0.75v for low-v suspend */
-	pmic_reg_write(dev, BD718XX_BUCK1_VOLT_SUSP, 0x5);
-
-	/* increase NVCC_DRAM_1V2 to 1.2v for DDR4 */
-	pmic_reg_write(dev, BD718XX_4TH_NODVS_BUCK_VOLT, 0x28);
+	/* Disable unused LDO6 */
+	pmic_reg_write(dev, BD718XX_LDO6_VOLT, 0x83);
 
 	/* lock the PMIC regs */
 	pmic_reg_write(dev, BD718XX_REGLOCK, 0x11);
 
 	return 0;
 }
-#endif
-
-#if CONFIG_IS_ENABLED(DM_PMIC_PCA9450)
-int power_init_board(void)
-{
-	struct udevice *dev;
-	int ret;
-
-	ret = pmic_get("pca9450@25", &dev);
-	if (ret == -ENODEV) {
-		puts("No pca9450@25\n");
-		return 0;
-	}
-	if (ret != 0)
-		return ret;
-
-	/* BUCKxOUT_DVS0/1 control BUCK123 output */
-	pmic_reg_write(dev, PCA9450_BUCK123_DVS, 0x29);
-
-#ifdef CONFIG_IMX8MN_LOW_DRIVE_MODE
-	/* Set VDD_SOC/VDD_DRAM to 0.8v for low drive mode */
-	pmic_reg_write(dev, PCA9450_BUCK1OUT_DVS0, 0x10);
-#elif defined(CONFIG_TARGET_IMX8MN_DDR3_EVK)
-	/* Set VDD_SOC to 0.85v for DDR3L at 1600MTS */
-	pmic_reg_write(dev, PCA9450_BUCK1OUT_DVS0, 0x14);
-
-	/* Disable the BUCK2 */
-	pmic_reg_write(dev, PCA9450_BUCK2CTRL, 0x48);
-
-	/* Set NVCC_DRAM to 1.35v */
-	pmic_reg_write(dev, PCA9450_BUCK6OUT, 0x1E);
-#else
-	/* increase VDD_SOC/VDD_DRAM to typical value 0.95V before first DRAM access */
-	pmic_reg_write(dev, PCA9450_BUCK1OUT_DVS0, 0x1C);
-#endif
-	/* Set DVS1 to 0.75v for low-v suspend */
-	/* Enable DVS control through PMIC_STBY_REQ and set B1_ENMODE=1 (ON by PMIC_ON_REQ=H) */
-	pmic_reg_write(dev, PCA9450_BUCK1OUT_DVS1, 0xC);
-	pmic_reg_write(dev, PCA9450_BUCK1CTRL, 0x59);
-
-	/* set VDD_SNVS_0V8 from default 0.85V */
-	pmic_reg_write(dev, PCA9450_LDO2CTRL, 0xC0);
-
-	/* enable LDO4 to 1.2v */
-	pmic_reg_write(dev, PCA9450_LDO4CTRL, 0x44);
-
-	/* set WDOG_B_CFG to cold reset */
-	pmic_reg_write(dev, PCA9450_RESET_CTRL, 0xA1);
-
-	return 0;
-}
-#endif
 
 #define UART_PAD_CTRL	(PAD_CTL_DSE6 | PAD_CTL_FSEL1)
 #define WDOG_PAD_CTRL	(PAD_CTL_DSE6 | PAD_CTL_ODE | PAD_CTL_PUE | PAD_CTL_PE)
