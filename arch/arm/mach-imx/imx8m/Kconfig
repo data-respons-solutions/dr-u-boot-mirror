@@ -301,7 +301,7 @@ config TARGET_VHGW
 	bool "Vehicle gateway"
 	select IMX8MN
 	select SUPPORT_SPL
-	select IMX8M_DDR3L
+	select IMX8M_LPDDR4
 	select FSL_CAAM
 	select FSL_BLOB
 	select SPL_CRYPTO if SPL
