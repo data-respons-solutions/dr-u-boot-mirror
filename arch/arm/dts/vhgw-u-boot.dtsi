@@ -104,24 +104,7 @@
 	u-boot,dm-spl;
 };
 
-&reg_usdhc2_vmmc {
-	u-boot,dm-spl;
-	u-boot,off-on-delay-us = <20000>;
-};
-
-&pinctrl_reg_usdhc2_vmmc {
-	u-boot,dm-spl;
-};
-
 &pinctrl_uart2 {
-	u-boot,dm-spl;
-};
-
-&pinctrl_usdhc2_gpio {
-	u-boot,dm-spl;
-};
-
-&pinctrl_usdhc2 {
 	u-boot,dm-spl;
 };
 
@@ -167,22 +150,6 @@
 
 &sec_jr2 {
 	u-boot,dm-spl;
-};
-
-&usdhc1 {
-	u-boot,dm-spl;
-	assigned-clocks = <&clk IMX8MN_CLK_USDHC1>;
-	assigned-clock-rates = <400000000>;
-	assigned-clock-parents = <&clk IMX8MN_SYS_PLL1_400M>;
-};
-
-&usdhc2 {
-	u-boot,dm-spl;
-	sd-uhs-sdr104;
-	sd-uhs-ddr50;
-	assigned-clocks = <&clk IMX8MN_CLK_USDHC2>;
-	assigned-clock-rates = <400000000>;
-	assigned-clock-parents = <&clk IMX8MN_SYS_PLL1_400M>;
 };
 
 &usdhc3 {
@@ -324,11 +291,11 @@
 	u-boot,dm-pre-reloc;
 };
 
-&{/soc@0/bus@30800000/i2c@30a20000/pca9450@25} {
+&{/soc@0/bus@30800000/i2c@30a20000/bd71850@4b} {
 	u-boot,dm-spl;
 };
 
-&{/soc@0/bus@30800000/i2c@30a20000/pca9450@25/regulators} {
+&{/soc@0/bus@30800000/i2c@30a20000/bd71850@4b/regulators} {
 	u-boot,dm-spl;
 };
 
@@ -342,18 +309,6 @@
 
 &pinctrl_pmic {
 	u-boot,dm-spl;
-};
-
-&fec1 {
-	phy-reset-gpios = <&gpio4 22 GPIO_ACTIVE_LOW>;
-};
-
-&ethphy0 {
-	vddio0: vddio-regulator {
-		regulator-name = "VDDIO";
-		regulator-min-microvolt = <1800000>;
-		regulator-max-microvolt = <1800000>;
-	};
 };
 
 &blob_1 {
