@@ -30,20 +30,7 @@
 
 #define CONFIG_CMD_READ
 #define CONFIG_SERIAL_TAG
-#define CONFIG_FASTBOOT_USB_DEV 0
-
 #define CONFIG_REMAKE_ELF
-/* ENET Config */
-/* ENET1 */
-#if defined(CONFIG_FEC_MXC)
-#define CONFIG_ETHPRIME                 "FEC"
-#define PHY_ANEG_TIMEOUT 20000
-
-#define CONFIG_FEC_XCV_TYPE             RGMII
-#define CONFIG_FEC_MXC_PHYADDR          0
-
-#define IMX_FEC_BASE			0x30BE0000
-#endif
 
 /* nxp shenanigans */
 #define CONFIG_SYS_MMC_ENV_DEV 2 /* Can't disable arch/arm/mach-imx/mmc_env.c */
@@ -51,11 +38,8 @@
 
 /* boot configuration */
 #define CONFIG_SYS_BOOTM_LEN (1024 * 1024 * 512) /* fit image might include kernel and ramdisk, increase size */
-#define SYS_BOOT_IFACE "mmc" /* Required by android_boot */
-#define SYS_BOOT_DEV 2 /* Required by android_boot */
 #define FIT_ADDR 0x43400000
 #define FIT_IMAGE "/boot/fitImage"
-
 
 /*
  * Boot order:
@@ -64,9 +48,6 @@
  */
 #define CONFIG_BOOTCOMMAND \
 	"echo starting boot procedure...;" \
-	"i2c dev 1;" \
-	"i2c mw 0x50 0x23 0x77 1;" \
-	"sleep 1;" \
 	"if usb start; then " \
 		"if system_load usb 0 --label TESTDRIVE; then " \
 			"usb stop;" \
@@ -80,11 +61,6 @@
 	"fi;" \
 	"echo no boot device found;"
 
-/* Initial environment variables */
-#define CONFIG_EXTRA_ENV_SETTINGS		\
-	"soc_type=imx8mm\0" /* Required by Android */
-
-
 /* Link Definitions */
 #define CONFIG_SYS_INIT_RAM_ADDR        0x40000000
 #define CONFIG_SYS_INIT_RAM_SIZE        0x80000
@@ -92,8 +68,6 @@
 	(CONFIG_SYS_INIT_RAM_SIZE - GENERATED_GBL_DATA_SIZE)
 #define CONFIG_SYS_INIT_SP_ADDR \
 	(CONFIG_SYS_INIT_RAM_ADDR + CONFIG_SYS_INIT_SP_OFFSET)
-
-#define CONFIG_MMCROOT			"/dev/mmcblk1p2"  /* USDHC2 */
 
 #define CONFIG_SYS_SDRAM_BASE           0x40000000
 #define PHYS_SDRAM                      0x40000000
