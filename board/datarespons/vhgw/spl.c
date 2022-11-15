@@ -50,6 +50,7 @@ void board_boot_order(u32 *spl_boot_list)
 	spl_boot_list[0] = spl_boot_device();
 	spl_boot_list[1] = spl_boot_device();
 }
+
 unsigned int spl_spi_get_uboot_offs(struct spi_flash *flash)
 {
 	static int i = 0;
@@ -96,16 +97,13 @@ int power_init_board(void)
 	return 0;
 }
 
-#define UART_PAD_CTRL	(PAD_CTL_DSE6 | PAD_CTL_FSEL1)
-#define WDOG_PAD_CTRL	(PAD_CTL_DSE6 | PAD_CTL_ODE | PAD_CTL_PUE | PAD_CTL_PE)
-
 static iomux_v3_cfg_t const uart_pads[] = {
-	IMX8MN_PAD_UART2_RXD__UART2_DCE_RX | MUX_PAD_CTRL(UART_PAD_CTRL),
-	IMX8MN_PAD_UART2_TXD__UART2_DCE_TX | MUX_PAD_CTRL(UART_PAD_CTRL),
+	IMX8MN_PAD_UART2_RXD__UART2_DTE_TX | MUX_PAD_CTRL(0x80),
+	IMX8MN_PAD_UART2_TXD__UART2_DTE_RX | MUX_PAD_CTRL(0x0),
 };
 
 static iomux_v3_cfg_t const wdog_pads[] = {
-	IMX8MN_PAD_GPIO1_IO02__WDOG1_WDOG_B  | MUX_PAD_CTRL(WDOG_PAD_CTRL),
+	IMX8MN_PAD_GPIO1_IO02__WDOG1_WDOG_B  | MUX_PAD_CTRL(0x166),
 };
 
 int board_early_init_f(void)
@@ -125,14 +123,6 @@ int board_early_init_f(void)
 
 void spl_board_init(void)
 {
-	struct udevice *dev;
-	int ret;
-
-	if (IS_ENABLED(CONFIG_FSL_CAAM)) {
-		ret = uclass_get_device_by_driver(UCLASS_MISC, DM_DRIVER_GET(caam_jr), &dev);
-		if (ret)
-			printf("Failed to initialize caam_jr: %d\n", ret);
-	}
 	puts("Normal Boot\n");
 }
 
