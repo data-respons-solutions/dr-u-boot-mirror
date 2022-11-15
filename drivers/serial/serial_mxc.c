@@ -194,7 +194,7 @@ static void mxc_serial_setbrg(void)
 	if (!gd->baudrate)
 		gd->baudrate = CONFIG_BAUDRATE;
 
-	_mxc_serial_setbrg(mxc_base, clk, gd->baudrate, false);
+	_mxc_serial_setbrg(mxc_base, clk, gd->baudrate, true);
 }
 
 static int mxc_serial_getc(void)
@@ -247,7 +247,7 @@ static int mxc_serial_tstc(void)
  */
 static int mxc_serial_init(void)
 {
-	_mxc_serial_init(mxc_base, false);
+	_mxc_serial_init(mxc_base, true);
 
 	serial_setbrg();
 
