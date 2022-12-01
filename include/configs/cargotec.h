@@ -153,7 +153,7 @@
 
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	"zimage=" ZIMAGE "\0" \
-	"fdt_addr=0x11000000\0" \
+	"fdt_addr=0x20000000\0" \
 	"ip_dyn=try\0" \
 	"console=" CONSOLE_DEV ",115200\0" \
 	"fdt_high=0xffffffff\0"	  \
@@ -186,7 +186,7 @@
 	"validate_image=" VALIDATE_ZIMAGE " \0" \
 	"validate_initrd=" VALIDATE_INITRD " \0" \
 	"check_usb_boot=if usb storage; then run setusb; fi;\0" \
-	"initrd_addr=0x12C00000\0" \
+	"initrd_addr=0x20400000\0" \
 	"initrd_high=0xffffffff\0" \
 	"factory_args=setenv bootargs console=${console} rdinit=/linuxrc enable_wait_mode=off \0" \
 	"install_args=setenv bootargs console=${console} rdinit=/install_script enable_wait_mode=off \0" \
