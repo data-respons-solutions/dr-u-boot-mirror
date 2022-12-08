@@ -312,6 +312,6 @@ source "board/technexion/pico-imx8mq/Kconfig"
 source "board/variscite/imx8mn_var_som/Kconfig"
 source "board/toradex/verdin-imx8mm/Kconfig"
 source "board/toradex/verdin-imx8mp/Kconfig"
-source "board/datarespons/vhgw/Kconfig
+source "board/datarespons/vhgw/Kconfig"
 
 endif
