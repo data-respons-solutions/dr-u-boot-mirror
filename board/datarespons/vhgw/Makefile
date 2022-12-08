@@ -5,7 +5,7 @@
 #
 
 ifdef CONFIG_SPL_BUILD
-obj-y += spl.o lpddr4_timing.o
+obj-y += spl.o lpddr4_timing_v1.2.o
 else
 obj-y += vhgw.o
 endif
