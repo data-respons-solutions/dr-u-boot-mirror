@@ -21,6 +21,21 @@
 	u-boot,dm-spl;
 };
 
+&ecspi1 {
+	u-boot,dm-spl;
+};
+
+&flash0 {
+	u-boot,dm-spl;
+	partitions {
+		u-boot,dm-spl;
+	};
+};
+
+&pinctrl_ecspi1 {
+	u-boot,dm-spl;
+};
+
 &{/soc@0/bus@30800000/i2c@30a20000/bd71850@4b} {
 	u-boot,dm-spl;
 };
