@@ -35,7 +35,7 @@ int spl_board_boot_device(enum boot_device boot_dev_spl)
 		return BOOT_DEVICE_NONE;
 	}
 }
-#if 0
+
 /*
  * u-boot image is stored in two flash sections for power fail safe updates. We avoid having to re-write spi
  * loader by calling existing functions twice (board_boot_order()) and adjusting offset from here (spl_spi_get_uboot_offs()).
@@ -54,7 +54,6 @@ unsigned int spl_spi_get_uboot_offs(struct spi_flash *flash)
 	printf("SPI offs: 0x%x\n", offs);
 	return offs;
 }
-#endif
 
 void spl_dram_init(void)
 {
