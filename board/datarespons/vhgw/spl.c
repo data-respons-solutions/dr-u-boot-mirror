@@ -98,8 +98,8 @@ int power_init_board(void)
 }
 
 static iomux_v3_cfg_t const uart_pads[] = {
-	IMX8MN_PAD_SAI3_TXFS__UART2_DTE_TX | MUX_PAD_CTRL(0x80),
-	IMX8MN_PAD_SAI3_TXC__UART2_DTE_RX | MUX_PAD_CTRL(0x0),
+	IMX8MN_PAD_SAI3_TXFS__UART2_DCE_RX | MUX_PAD_CTRL(0x0),
+	IMX8MN_PAD_SAI3_TXC__UART2_DCE_TX | MUX_PAD_CTRL(0x80),
 };
 
 static iomux_v3_cfg_t const wdog_pads[] = {
