@@ -1,57 +1,48 @@
-/* SPDX-License-Identifier: GPL-2.0+ */
+// SPDX-License-Identifier: GPL-2.0-or-later
 /*
- * Copyright 2018 NXP
+ * Copyright 2022, Data Respons Solutions AB
+ *
  */
 
-#ifndef __IMX8MN_EVK_H
-#define __IMX8MN_EVK_H
+#ifndef VHGW_H__
+#define VHGW_H__
 
 #include <linux/sizes.h>
-#include <linux/stringify.h>
 #include <asm/arch/imx-regs.h>
 
 #define CONFIG_SYS_MONITOR_LEN		SZ_512K
 #define CONFIG_SYS_UBOOT_BASE	\
 	(QSPI0_AMBA_BASE + CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_SECTOR * 512)
 
-#define BOOT_TARGET_DEVICES(func) \
-	func(MMC, mmc, 1) \
-	func(MMC, mmc, 2) \
-	func(DHCP, dhcp, na)
+/* boot configuration */
+#define FIT_ADDR 0x43400000
+#define FIT_IMAGE "/boot/fitImage"
 
-#include <config_distro_bootcmd.h>
-
-/* Initial environment variables */
-/* see include/configs/ti_armv7_common.h */
-#define ENV_MEM_LAYOUT_SETTINGS \
-	"loadaddr=" __stringify(CONFIG_SYS_LOAD_ADDR) "\0" \
-	"kernel_addr_r=0x42000000\0" \
-	"fdt_addr_r=0x48000000\0" \
-	"fdtoverlay_addr_r=0x49000000\0" \
-	"ramdisk_addr_r=0x48080000\0" \
-	"initrd_addr=0x48080000\0" \
-	"scriptaddr=0x40000000\0" \
-	"pxefile_addr_r=0x40100000\0"
-
-#define CONFIG_EXTRA_ENV_SETTINGS		\
-	"image=Image\0" \
-	BOOTENV \
-	"console=ttymxc1,115200\0" \
-	"boot_fit=no\0" \
-	"fdtfile=" CONFIG_DEFAULT_FDT_FILE "\0" \
-	"bootm_size=0x10000000\0" \
-	"mmcpart=1\0" \
-	"mmcroot=/dev/mmcblk1p2 rootwait rw\0" \
-	ENV_MEM_LAYOUT_SETTINGS
+/*
+ * Boot order:
+ * - USB partition with label TESTDRIVE
+ * - mmc2 partition with label rootfs1
+ */
+#define CONFIG_BOOTCOMMAND \
+	"echo starting boot procedure...;" \
+	"if usb start; then " \
+		"if system_load usb 0 --label TESTDRIVE; then " \
+			"usb stop;" \
+			"system_boot;" \
+		"else " \
+			"usb stop;" \
+		"fi;" \
+	"fi;" \
+	"if system_load mmc 2; then " \
+		"system_boot;" \
+	"fi;" \
+	"echo no boot device found;"
 
 /* Link Definitions */
+#define CONFIG_SYS_INIT_RAM_ADDR	0x40000000
+#define CONFIG_SYS_INIT_RAM_SIZE	0x200000
+#define CONFIG_SYS_SDRAM_BASE		0x40000000
+#define PHYS_SDRAM					0x40000000
+#define PHYS_SDRAM_SIZE				0x40000000 /* 1GB DDR */
 
-#define CONFIG_SYS_INIT_RAM_ADDR        0x40000000
-#define CONFIG_SYS_INIT_RAM_SIZE        0x200000
-
-
-#define CONFIG_SYS_SDRAM_BASE           0x40000000
-#define PHYS_SDRAM                      0x40000000
-#define PHYS_SDRAM_SIZE			0x80000000 /* 2GB DDR */
-
-#endif
+#endif // VHGW_H__
