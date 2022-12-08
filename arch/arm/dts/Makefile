@@ -1005,7 +1005,8 @@ dtb-$(CONFIG_ARCH_IMX8M) += \
 	imx8mp-verdin-wifi-dev.dtb \
 	imx8mq-pico-pi.dtb \
 	imx8mq-kontron-pitx-imx8m.dtb \
-	imx8mq-librem5-r4.dtb
+	imx8mq-librem5-r4.dtb \
+	vhgw.dtb
 
 dtb-$(CONFIG_ARCH_IMX9) += \
 	imx93-11x11-evk.dtb
