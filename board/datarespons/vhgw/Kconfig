@@ -1,0 +1,8 @@
+config SYS_BOARD
+	default "vhgw"
+
+config SYS_VENDOR
+	default "datarespons"
+
+config SYS_CONFIG_NAME
+	default "vhgw"
