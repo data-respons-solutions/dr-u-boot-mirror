@@ -1,22 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 /*
- * Copyright 2018-2019, 2021 NXP
+ * Copyright 2022, Data Respons Solutions AB
  *
  */
 
 #include <common.h>
-#include <command.h>
-#include <cpu_func.h>
 #include <hang.h>
-#include <image.h>
 #include <init.h>
-#include <log.h>
 #include <spl.h>
 #include <asm/global_data.h>
 #include <asm/io.h>
-#include <asm/mach-imx/iomux-v3.h>
 #include <asm/arch/clock.h>
-#include <asm/arch/imx8mn_pins.h>
 #include <asm/arch/sys_proto.h>
 #include <asm/mach-imx/boot_mode.h>
 #include <asm/arch/ddr.h>
@@ -26,18 +20,41 @@
 #include <dm/uclass-internal.h>
 #include <dm/device-internal.h>
 #include <power/pmic.h>
-#include <power/pca9450.h>
-#include <asm/mach-imx/gpio.h>
-#include <asm/mach-imx/mxc_i2c.h>
-#include <fsl_esdhc_imx.h>
-#include <mmc.h>
+#include <power/bd71837.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
 int spl_board_boot_device(enum boot_device boot_dev_spl)
 {
-	return BOOT_DEVICE_BOOTROM;
+	switch (boot_dev_spl) {
+	case SD1_BOOT:
+		return BOOT_DEVICE_SPI;
+	case USB_BOOT:
+		return BOOT_DEVICE_BOOTROM;
+	default:
+		return BOOT_DEVICE_NONE;
+	}
 }
+#if 0
+/*
+ * u-boot image is stored in two flash sections for power fail safe updates. We avoid having to re-write spi
+ * loader by calling existing functions twice (board_boot_order()) and adjusting offset from here (spl_spi_get_uboot_offs()).
+ */
+void board_boot_order(u32 *spl_boot_list)
+{
+	spl_boot_list[0] = spl_boot_device();
+	spl_boot_list[1] = spl_boot_device();
+}
+
+unsigned int spl_spi_get_uboot_offs(struct spi_flash *flash)
+{
+	static int i = 0;
+	const unsigned int offs = i == 0 ? CONFIG_SYS_SPI_U_BOOT_OFFS : CONFIG_SYS_SPI_U_BOOT2_OFFS;
+	i++;
+	printf("SPI offs: 0x%x\n", offs);
+	return offs;
+}
+#endif
 
 void spl_dram_init(void)
 {
@@ -63,50 +80,38 @@ void spl_board_init(void)
 		printf("Failed to find clock node. Check device tree\n");
 }
 
-#if CONFIG_IS_ENABLED(DM_PMIC_PCA9450)
 int power_init_board(void)
 {
-	puts("YEPP");
 	struct udevice *dev;
 	int ret;
 
-	ret = pmic_get("pmic@25", &dev);
-	if (ret == -ENODEV) {
-		puts("No pca9450@25\n");
-		return 0;
-	}
-	if (ret != 0)
+	ret = pmic_get("bd71850@4b", &dev);
+	if (ret != 0) {
+		puts("No bd71850@4b\n");
 		return ret;
+	}
 
-	/* BUCKxOUT_DVS0/1 control BUCK123 output */
-	pmic_reg_write(dev, PCA9450_BUCK123_DVS, 0x29);
+	/* decrease RESET key long push time from the default 10s to 10ms */
+	pmic_reg_write(dev, BD718XX_PWRONCONFIG1, 0x0);
 
-#ifdef CONFIG_IMX8MN_LOW_DRIVE_MODE
-	/* Set VDD_SOC/VDD_DRAM to 0.8v for low drive mode */
-	pmic_reg_write(dev, PCA9450_BUCK1OUT_DVS0, 0x10);
-#else
-	/* increase VDD_SOC/VDD_DRAM to typical value 0.95V before first DRAM access */
-	pmic_reg_write(dev, PCA9450_BUCK1OUT_DVS0, 0x1C);
-#endif
-	/* Set DVS1 to 0.85v for suspend */
-	/* Enable DVS control through PMIC_STBY_REQ and set B1_ENMODE=1 (ON by PMIC_ON_REQ=H) */
-	pmic_reg_write(dev, PCA9450_BUCK1OUT_DVS1, 0x14);
-	pmic_reg_write(dev, PCA9450_BUCK1CTRL, 0x59);
+	/* unlock the PMIC regs */
+	pmic_reg_write(dev, BD718XX_REGLOCK, 0x1);
 
-	/* set VDD_SNVS_0V8 from default 0.85V */
-	pmic_reg_write(dev, PCA9450_LDO2CTRL, 0xC0);
+	/* Set VDD_SOC to typical 0.95v for 1,4GHz ARM and 1,6GHz LPDDR4 */
+	pmic_reg_write(dev, BD718XX_BUCK1_VOLT_RUN, 0x19);
 
-	/* enable LDO4 to 1.2v */
-	pmic_reg_write(dev, PCA9450_LDO4CTRL, 0x44);
+	/* Disable unused BUCK2 */
+	pmic_reg_write(dev, BD718XX_BUCK2_CTRL, 0x42);
 
-	/* set WDOG_B_CFG to cold reset */
-	pmic_reg_write(dev, PCA9450_RESET_CTRL, 0xA1);
+	/* Disable unused LDO6 */
+	pmic_reg_write(dev, BD718XX_LDO6_VOLT, 0x83);
+
+	/* lock the PMIC regs */
+	pmic_reg_write(dev, BD718XX_REGLOCK, 0x11);
 
 	return 0;
 }
-#endif
 
-#ifdef CONFIG_SPL_LOAD_FIT
 int board_fit_config_name_match(const char *name)
 {
 	/* Just empty function now - can't decide what to choose */
@@ -114,7 +119,6 @@ int board_fit_config_name_match(const char *name)
 
 	return 0;
 }
-#endif
 
 void board_init_f(ulong dummy)
 {
@@ -138,6 +142,8 @@ void board_init_f(ulong dummy)
 	preloader_console_init();
 
 	enable_tzc380();
+
+	power_init_board();
 
 	/* DDR initialization */
 	spl_dram_init();
