@@ -24,6 +24,19 @@
 		device_type = "memory";
 		reg = <0x0 0x40000000 0 0x80000000>;
 	};
+
+	reg_usb0: regulator-usb0 {
+		compatible = "regulator-fixed";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_reg_usb0>;
+		regulator-name = "usb0";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpio = <&gpio4 25 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-always-on;
+		regulator-boot-on;
+	};
 };
 
 &A53_0 {
@@ -262,6 +275,12 @@
 };
 
 &iomuxc {
+	pinctrl_reg_usb0: usb0reggrp {
+		fsl,pins = <
+			MX8MN_IOMUXC_SAI2_TXC_GPIO4_IO25	0x100 /* USB_OTG_PWR_EN */
+		>;
+	};
+
 	pinctrl_i2c1: i2c1grp {
 		fsl,pins = <
 			MX8MN_IOMUXC_I2C1_SCL_I2C1_SCL		0x400001c3 /* I2C1_SCL */
