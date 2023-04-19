@@ -15,7 +15,7 @@
 	(QSPI0_AMBA_BASE + CONFIG_SYS_MMCSD_RAW_MODE_U_BOOT_SECTOR * 512)
 
 /* boot configuration */
-#define FIT_ADDR 0x43400000
+#define FIT_ADDR 0x43600000
 #define FIT_IMAGE "/boot/fitImage"
 
 /*
