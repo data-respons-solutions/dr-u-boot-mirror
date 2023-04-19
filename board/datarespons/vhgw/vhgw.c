@@ -9,8 +9,28 @@
 #include <init.h>
 #include <asm/global_data.h>
 #include <power/regulator.h>
+#include <bloblist.h>
+#include <../common/platform_header.h>
 
 DECLARE_GLOBAL_DATA_PTR;
+
+#define BLOBLIST_DATARESPONS_PLATFORM 0xc001
+
+int board_phys_sdram_size(phys_size_t *size)
+{
+	struct platform_header* platform_header = bloblist_find(BLOBLIST_DATARESPONS_PLATFORM,
+												sizeof(struct platform_header));
+	if (size == NULL)
+		return -EINVAL;
+	if (platform_header == NULL) {
+		printf("No platform_header -- set ram size to default: 0x%llx\n", (phys_size_t) PHYS_SDRAM_SIZE);
+		*size = PHYS_SDRAM_SIZE;
+	}
+	else {
+		*size = platform_header->ddrc_size;
+	}
+	return 0;
+}
 
 int power_init_board(void)
 {

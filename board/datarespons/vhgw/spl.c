@@ -22,7 +22,21 @@
 #include <power/pmic.h>
 #include <power/bd71837.h>
 
+#include <spi_flash.h>
+#include <u-boot/zlib.h>
+#include <bloblist.h>
+
+#include "../common/platform_header.h"
+#include "../common/imx8m_ddrc_parse.h"
+
 DECLARE_GLOBAL_DATA_PTR;
+
+#define CONFIG_DR_NVRAM_PLATFORM_OFFSET 0x3E0000
+#define BLOBLIST_DATARESPONS_PLATFORM 0xc001
+#define SRC_GPR10_PERSIST_SECONDARY_BOOT BIT(30)
+
+struct platform_header platform_header;
+struct dram_timing_info dram_timing_info;
 
 int spl_board_boot_device(enum boot_device boot_dev_spl)
 {
@@ -37,27 +51,42 @@ int spl_board_boot_device(enum boot_device boot_dev_spl)
 }
 
 /*
- * u-boot image is stored in two flash sections for power fail safe updates. We avoid having to re-write spi
- * loader by calling existing functions twice (board_boot_order()) and adjusting offset from here (spl_spi_get_uboot_offs()).
+ * Primary SPL boots primary u-boot
+ * Secondary SPL boots secondary u-boot
+ *
+ * If boot fails, try the other one (i.e. Primary SPL -> secondary u-boot)
+ * This state should be avoided in flashing stage by:
+ *  - always erase SPL before u-boot
+ *  - always write u-boot before SPL
  */
 void board_boot_order(u32 *spl_boot_list)
 {
 	spl_boot_list[0] = spl_boot_device();
 	spl_boot_list[1] = spl_boot_device();
 }
-
 unsigned int spl_spi_get_uboot_offs(struct spi_flash *flash)
 {
+	volatile struct src *src = (volatile struct src*) SRC_BASE_ADDR;
 	static int i = 0;
-	const unsigned int offs = i == 0 ? CONFIG_SYS_SPI_U_BOOT_OFFS : CONFIG_SYS_SPI_U_BOOT2_OFFS;
+	const int is_primary = (src->gpr10 & SRC_GPR10_PERSIST_SECONDARY_BOOT) == 0;
+	unsigned int addr = 0;
+
+	if (i == 0)
+		addr = is_primary ? CONFIG_SYS_SPI_U_BOOT_OFFS : CONFIG_SYS_SPI_U_BOOT2_OFFS;
+	else
+		addr = is_primary ? CONFIG_SYS_SPI_U_BOOT2_OFFS : CONFIG_SYS_SPI_U_BOOT_OFFS;
 	i++;
-	printf("SPI offs: 0x%x\n", offs);
-	return offs;
+
+	if (addr == CONFIG_SYS_SPI_U_BOOT_OFFS)
+		printf("Primary boot\n");
+	else
+		printf("Secondary boot\n");
+	return addr;
 }
 
-void spl_dram_init(void)
+void spl_dram_init(struct dram_timing_info* dram_timing_info)
 {
-	ddr_init(&dram_timing);
+	ddr_init(dram_timing_info);
 }
 
 void spl_board_init(void)
@@ -77,6 +106,14 @@ void spl_board_init(void)
 					&dev);
 	if (ret < 0)
 		printf("Failed to find clock node. Check device tree\n");
+
+	/* Store platform header in dram */
+	void* pheader = bloblist_add(BLOBLIST_DATARESPONS_PLATFORM, sizeof(struct platform_header), 8);
+	if (pheader == NULL) {
+		printf("platform header blob registration failed\n");
+		hang();
+	}
+	memcpy(pheader, &platform_header, sizeof(struct platform_header));
 }
 
 int power_init_board(void)
@@ -119,6 +156,57 @@ int board_fit_config_name_match(const char *name)
 	return 0;
 }
 
+static int read_platform_header(struct platform_header* platform_header, struct dram_timing_info* dram_timing_info)
+{
+	struct spi_flash *flash = NULL;
+	int r = 0;
+	flash = spi_flash_probe(CONFIG_SF_DEFAULT_BUS, CONFIG_SF_DEFAULT_CS,
+			CONFIG_SF_DEFAULT_SPEED, CONFIG_SF_DEFAULT_MODE);
+	if (!flash)
+		return -ENODEV;
+
+	uint8_t* header_buf = malloc_simple(PLATFORM_HEADER_SIZE);
+	if (header_buf == NULL)
+		return -ENOMEM;
+
+	r = spi_flash_read(flash, CONFIG_DR_NVRAM_PLATFORM_OFFSET, PLATFORM_HEADER_SIZE, header_buf);
+	if (r != 0)
+		return r;
+
+	r = parse_header(platform_header, header_buf, PLATFORM_HEADER_SIZE);
+	if (r != 0) {
+		printf("platform_header corrupt: %d\n", r);
+		return r;
+	}
+
+	uint8_t* dram_buf = malloc_simple(platform_header->ddrc_blob_size);
+	if (dram_buf == NULL)
+		return -ENOMEM;
+
+	r = spi_flash_read(flash, CONFIG_DR_NVRAM_PLATFORM_OFFSET + platform_header->ddrc_blob_offset,
+							platform_header->ddrc_blob_size, dram_buf);
+	if (r != 0)
+		return r;
+
+	const uint32_t crc32_init = crc32(0L, Z_NULL, 0);
+	const uint32_t crc32_calc = crc32(crc32_init, dram_buf, platform_header->ddrc_blob_size);
+	if (platform_header->ddrc_blob_crc32 != crc32_calc) {
+		printf("dram_timing_info corrupt: crc32 mismatch\n");
+		return -EINVAL;
+	}
+
+	r = parse_dram_timing_info(dram_timing_info, dram_buf, platform_header->ddrc_blob_size);
+	if (r != 0) {
+		printf("dram_timing_info corrupt: %d\n", r);
+		return r;
+	}
+
+	free(header_buf);
+	free(dram_buf);
+
+	return 0;
+}
+
 void board_init_f(ulong dummy)
 {
 	int ret;
@@ -144,8 +232,17 @@ void board_init_f(ulong dummy)
 
 	power_init_board();
 
-	/* DDR initialization */
-	spl_dram_init();
+	ret = read_platform_header(&platform_header, &dram_timing_info);
+	if (ret != 0) {
+		printf("platform header failed: %d\n", ret);
+		hang();
+	}
 
+	printf("Platform: %s\n", platform_header.name);
+
+	/* DDR initialization */
+	spl_dram_init(&dram_timing_info);
+
+	/* init */
 	board_init_r(NULL, 0);
 }
