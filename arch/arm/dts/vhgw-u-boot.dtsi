@@ -29,6 +29,17 @@
 	u-boot,dm-spl;
 	partitions {
 		u-boot,dm-spl;
+		platform@3E0000 {
+			u-boot,dm-spl;
+		};
+		u-boot@40000 {
+			u-boot,dm-spl;
+			read-only;
+		};
+		u-boot-second@230000 {
+			u-boot,dm-spl;
+			read-only;
+		};
 	};
 };
 
