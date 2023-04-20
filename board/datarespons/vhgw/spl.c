@@ -14,19 +14,17 @@
 #include <asm/arch/sys_proto.h>
 #include <asm/mach-imx/boot_mode.h>
 #include <asm/arch/ddr.h>
-
 #include <dm/uclass.h>
 #include <dm/device.h>
 #include <dm/uclass-internal.h>
 #include <dm/device-internal.h>
 #include <power/pmic.h>
 #include <power/bd71837.h>
-
 #include <spi_flash.h>
 #include <u-boot/zlib.h>
 #include <bloblist.h>
 #include <mtd.h>
-
+#include <image.h>
 #include "../common/platform_header.h"
 #include "../common/imx8m_ddrc_parse.h"
 
@@ -70,36 +68,72 @@ struct mtd_info* get_mtd_by_partname(const char* partname)
  *  - always erase SPL before u-boot
  *  - always write u-boot before SPL
  */
-void board_boot_order(u32 *spl_boot_list)
+static ulong spl_mtd_fit_read(struct spl_load_info *load, ulong sector,
+			      ulong count, void *buf)
 {
-	spl_boot_list[0] = spl_boot_device();
-	spl_boot_list[1] = spl_boot_device();
+	struct mtd_info *mtd = load->dev;
+	size_t retlen = 0;
+	ulong r = 0;
+	r = mtd_read(mtd, sector, count, &retlen, buf);
+	if (r != 0)
+		return 0;
+	return (ulong) retlen;
 }
-unsigned int spl_spi_get_uboot_offs(struct spi_flash *flash)
+static int spl_mtd_load_image(struct spl_image_info *spl_image,
+			      struct spl_boot_device *bootdev)
 {
-	volatile struct src *src = (volatile struct src*) SRC_BASE_ADDR;
-	static int i = 0;
-	const int is_primary = (src->gpr10 & SRC_GPR10_PERSIST_SECONDARY_BOOT) == 0;
-	unsigned int addr = CONFIG_SYS_SPI_U_BOOT_OFFS;
-	struct mtd_info* u_boot = get_mtd_by_partname("u-boot");
-	struct mtd_info* u_boot_second = get_mtd_by_partname("u-boot-second");
-	if (u_boot == NULL || u_boot_second == NULL) {
-		printf("Failed retrieving u-boot offset, reverting to default: 0x%x\n", addr);
-		return addr;
+	struct mtd_info *mtd = NULL;
+	struct image_header *header = NULL;
+	size_t retlen = 0;
+	int r = 0;
+	char* partnames[] = {"u-boot", "u-boot-second"};
+
+	volatile const struct src *src = (volatile const struct src*) SRC_BASE_ADDR;
+	if ((src->gpr10 & SRC_GPR10_PERSIST_SECONDARY_BOOT) == SRC_GPR10_PERSIST_SECONDARY_BOOT) {
+		/* Secondary boot, swap partition search order */
+		char* tmp = partnames[0];
+		partnames[0] = partnames[1];
+		partnames[1] = tmp;
 	}
 
-	if (i == 0)
-		addr = is_primary ? u_boot->offset : u_boot_second->offset;
-	else
-		addr = is_primary ? u_boot_second->offset : u_boot->offset;
-	i++;
+	header = spl_get_load_buffer(-sizeof(*header), sizeof(*header));
 
-	if (addr == u_boot->offset)
-		printf("Primary boot\n");
-	else
-		printf("Secondary boot\n");
-	return addr;
+	for (size_t i = 0; i < ARRAY_SIZE(partnames); ++i) {
+		printf("MTD load: %s\n", partnames [i]);
+		mtd = get_mtd_by_partname(partnames [i]);
+		if (mtd == NULL) {
+			printf("MTD probe failed\n");
+			r = -ENODEV;
+			continue;
+		}
+
+		/* Load u-boot, mkimage header is 64 bytes. */
+		r = mtd_read(mtd, 0, sizeof(*header), &retlen, (void*) header);
+		if (r != 0 || retlen != sizeof(*header)) {
+			if (retlen != sizeof(*header))
+				r = -EIO;
+			printf("MTD Failed reading from device: %d\n", r);
+			continue;
+		}
+		if (image_get_magic(header) != FDT_MAGIC) {
+			printf("%s: Image not of type FDT\n", __func__);
+			r = -EINVAL;
+			continue;
+		}
+		struct spl_load_info load;
+		load.dev = mtd;
+		load.priv = NULL;
+		load.filename = NULL;
+		load.bl_len = 1;
+		load.read = spl_mtd_fit_read;
+		r = spl_load_simple_fit(spl_image, &load, 0, header);
+		if (r == 0)
+			break;
+	}
+
+	return r;
 }
+SPL_LOAD_IMAGE_METHOD("MTD", 0, BOOT_DEVICE_SPI, spl_mtd_load_image);
 
 void spl_dram_init(struct dram_timing_info* dram_timing_info)
 {
