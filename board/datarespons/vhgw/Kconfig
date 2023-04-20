@@ -6,8 +6,5 @@ config SYS_VENDOR
 
 config SYS_CONFIG_NAME
 	default "vhgw"
-	
-config SYS_SPI_U_BOOT2_OFFS
-	hex "address of u-boot-second payload in SPI flash"
 
 source "board/datarespons/common/Kconfig"
