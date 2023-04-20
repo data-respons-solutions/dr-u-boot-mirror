@@ -25,6 +25,7 @@
 #include <spi_flash.h>
 #include <u-boot/zlib.h>
 #include <bloblist.h>
+#include <mtd.h>
 
 #include "../common/platform_header.h"
 #include "../common/imx8m_ddrc_parse.h"
@@ -50,6 +51,16 @@ int spl_board_boot_device(enum boot_device boot_dev_spl)
 	}
 }
 
+struct mtd_info* get_mtd_by_partname(const char* partname)
+{
+	struct mtd_info* mtd = NULL;
+	mtd_for_each_device(mtd) {
+		if (mtd_is_partition(mtd) && (strcmp(mtd->name, partname) == 0))
+			return mtd;
+	}
+	return NULL;
+}
+
 /*
  * Primary SPL boots primary u-boot
  * Secondary SPL boots secondary u-boot
@@ -69,15 +80,21 @@ unsigned int spl_spi_get_uboot_offs(struct spi_flash *flash)
 	volatile struct src *src = (volatile struct src*) SRC_BASE_ADDR;
 	static int i = 0;
 	const int is_primary = (src->gpr10 & SRC_GPR10_PERSIST_SECONDARY_BOOT) == 0;
-	unsigned int addr = 0;
+	unsigned int addr = CONFIG_SYS_SPI_U_BOOT_OFFS;
+	struct mtd_info* u_boot = get_mtd_by_partname("u-boot");
+	struct mtd_info* u_boot_second = get_mtd_by_partname("u-boot-second");
+	if (u_boot == NULL || u_boot_second == NULL) {
+		printf("Failed retrieving u-boot offset, reverting to default: 0x%x\n", addr);
+		return addr;
+	}
 
 	if (i == 0)
-		addr = is_primary ? CONFIG_SYS_SPI_U_BOOT_OFFS : CONFIG_SYS_SPI_U_BOOT2_OFFS;
+		addr = is_primary ? u_boot->offset : u_boot_second->offset;
 	else
-		addr = is_primary ? CONFIG_SYS_SPI_U_BOOT2_OFFS : CONFIG_SYS_SPI_U_BOOT_OFFS;
+		addr = is_primary ? u_boot_second->offset : u_boot->offset;
 	i++;
 
-	if (addr == CONFIG_SYS_SPI_U_BOOT_OFFS)
+	if (addr == u_boot->offset)
 		printf("Primary boot\n");
 	else
 		printf("Secondary boot\n");
@@ -158,53 +175,58 @@ int board_fit_config_name_match(const char *name)
 
 static int read_platform_header(struct platform_header* platform_header, struct dram_timing_info* dram_timing_info)
 {
-	struct spi_flash *flash = NULL;
 	int r = 0;
-	flash = spi_flash_probe(CONFIG_SF_DEFAULT_BUS, CONFIG_SF_DEFAULT_CS,
-			CONFIG_SF_DEFAULT_SPEED, CONFIG_SF_DEFAULT_MODE);
-	if (!flash)
+	size_t retlen = 0;
+	struct mtd_info* platform = get_mtd_by_partname("platform");
+	if (platform == NULL)
 		return -ENODEV;
 
-	uint8_t* header_buf = malloc_simple(PLATFORM_HEADER_SIZE);
+	uint8_t* header_buf = malloc(PLATFORM_HEADER_SIZE);
 	if (header_buf == NULL)
 		return -ENOMEM;
 
-	r = spi_flash_read(flash, CONFIG_DR_NVRAM_PLATFORM_OFFSET, PLATFORM_HEADER_SIZE, header_buf);
-	if (r != 0)
-		return r;
+	r = mtd_read(platform, 0, PLATFORM_HEADER_SIZE, &retlen, header_buf);
+	if (r != 0 || retlen != PLATFORM_HEADER_SIZE)
+		goto exit;
 
 	r = parse_header(platform_header, header_buf, PLATFORM_HEADER_SIZE);
 	if (r != 0) {
 		printf("platform_header corrupt: %d\n", r);
-		return r;
+		goto exit;
 	}
 
-	uint8_t* dram_buf = malloc_simple(platform_header->ddrc_blob_size);
-	if (dram_buf == NULL)
-		return -ENOMEM;
+	uint8_t* dram_buf = malloc(platform_header->ddrc_blob_size);
+	if (dram_buf == NULL) {
+		r = -ENOMEM;
+		goto exit;
+	}
 
-	r = spi_flash_read(flash, CONFIG_DR_NVRAM_PLATFORM_OFFSET + platform_header->ddrc_blob_offset,
-							platform_header->ddrc_blob_size, dram_buf);
-	if (r != 0)
-		return r;
+	r = mtd_read(platform, platform_header->ddrc_blob_offset,
+					platform_header->ddrc_blob_size, &retlen, dram_buf);
+	if (r != 0 || retlen != platform_header->ddrc_blob_size)
+		goto exit;
 
 	const uint32_t crc32_init = crc32(0L, Z_NULL, 0);
 	const uint32_t crc32_calc = crc32(crc32_init, dram_buf, platform_header->ddrc_blob_size);
 	if (platform_header->ddrc_blob_crc32 != crc32_calc) {
 		printf("dram_timing_info corrupt: crc32 mismatch\n");
-		return -EINVAL;
+		r = -EINVAL;
+		goto exit;
 	}
 
 	r = parse_dram_timing_info(dram_timing_info, dram_buf, platform_header->ddrc_blob_size);
 	if (r != 0) {
 		printf("dram_timing_info corrupt: %d\n", r);
-		return r;
+		goto exit;
 	}
 
-	free(header_buf);
-	free(dram_buf);
-
-	return 0;
+	r = 0;
+exit:
+	if (header_buf != NULL)
+		free(header_buf);
+	if (dram_buf != NULL)
+		free(dram_buf);
+	return r;
 }
 
 void board_init_f(ulong dummy)
@@ -231,6 +253,9 @@ void board_init_f(ulong dummy)
 	enable_tzc380();
 
 	power_init_board();
+
+	/* Ensure all devices (and their partitions) are probed */
+	mtd_probe_devices();
 
 	ret = read_platform_header(&platform_header, &dram_timing_info);
 	if (ret != 0) {
