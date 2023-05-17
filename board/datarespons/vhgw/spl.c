@@ -83,7 +83,7 @@ static int spl_mtd_load_image(struct spl_image_info *spl_image,
 			      struct spl_boot_device *bootdev)
 {
 	struct mtd_info *mtd = NULL;
-	struct image_header *header = NULL;
+	struct legacy_img_hdr *header = NULL;
 	size_t retlen = 0;
 	int r = 0;
 	char* partnames[] = {"u-boot", "u-boot-second"};
