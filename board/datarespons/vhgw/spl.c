@@ -40,7 +40,7 @@ struct dram_timing_info dram_timing_info;
 int spl_board_boot_device(enum boot_device boot_dev_spl)
 {
 	switch (boot_dev_spl) {
-	case SD1_BOOT:
+	case SPI_NOR_BOOT:
 		return BOOT_DEVICE_SPI;
 	case USB_BOOT:
 		return BOOT_DEVICE_BOOTROM;
