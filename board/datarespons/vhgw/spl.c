@@ -184,8 +184,8 @@ int power_init_board(void)
 	/* unlock the PMIC regs */
 	pmic_reg_write(dev, BD718XX_REGLOCK, 0x1);
 
-	/* Set VDD_SOC to typical 0.95v for 1,4GHz ARM and 1,6GHz LPDDR4 */
-	pmic_reg_write(dev, BD718XX_BUCK1_VOLT_RUN, 0x19);
+	/* Set VDD_SOC to typical 0.85v for 1,2GHz ARM and 1,2GHz LPDDR4 */
+	pmic_reg_write(dev, BD718XX_BUCK1_VOLT_RUN, 0xf);
 
 	/* Disable unused BUCK2 */
 	pmic_reg_write(dev, BD718XX_BUCK2_CTRL, 0x42);
