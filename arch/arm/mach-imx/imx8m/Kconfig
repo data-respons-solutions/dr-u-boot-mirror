@@ -326,6 +326,7 @@ config TARGET_VHGW
 	select IMX8MN
 	select SUPPORT_SPL
 	select IMX8M_LPDDR4
+	select BINMAN
 	select FSL_CAAM
 	select SPL_CRYPTO if SPL
 
