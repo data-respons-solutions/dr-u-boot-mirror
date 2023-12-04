@@ -7,4 +7,7 @@ config SYS_VENDOR
 config SYS_CONFIG_NAME
 	default "vhgw"
 
+config IMX_CONFIG
+	default "board/datarespons/vhgw/imximage-spl.cfg"
+
 source "board/datarespons/common/Kconfig"
