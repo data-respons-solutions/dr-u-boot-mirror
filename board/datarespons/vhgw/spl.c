@@ -13,6 +13,7 @@
 #include <asm/arch/clock.h>
 #include <asm/arch/sys_proto.h>
 #include <asm/mach-imx/boot_mode.h>
+#include <asm/mach-imx/hab.h>
 #include <asm/arch/ddr.h>
 #include <dm/uclass.h>
 #include <dm/device.h>
@@ -33,6 +34,8 @@ DECLARE_GLOBAL_DATA_PTR;
 #define CONFIG_DR_NVRAM_PLATFORM_OFFSET 0x3E0000
 #define BLOBLIST_DATARESPONS_PLATFORM 0xc001
 #define SRC_GPR10_PERSIST_SECONDARY_BOOT BIT(30)
+#define PLATFORM_HEADER_LOADADDR 0x961000
+#define PLATFORM_HEADER_IVT_OFFSET 0x400
 
 struct platform_header platform_header;
 struct dram_timing_info dram_timing_info;
@@ -214,53 +217,57 @@ static int read_platform_header(struct platform_header* platform_header, struct 
 	struct mtd_info* platform = get_mtd_by_partname("platform");
 	if (platform == NULL)
 		return -ENODEV;
+	u8 *buf = (u8*) PLATFORM_HEADER_LOADADDR;
 
-	uint8_t* header_buf = malloc(PLATFORM_HEADER_SIZE);
-	if (header_buf == NULL)
-		return -ENOMEM;
-
-	r = mtd_read(platform, 0, PLATFORM_HEADER_SIZE, &retlen, header_buf);
-	if (r != 0 || retlen != PLATFORM_HEADER_SIZE)
-		goto exit;
-
-	r = parse_header(platform_header, header_buf, PLATFORM_HEADER_SIZE);
+	/* Read and parse header */
+	r = mtd_read(platform, 0, PLATFORM_HEADER_SIZE, &retlen, buf);
+	if (r == 0 && retlen != PLATFORM_HEADER_SIZE)
+		r = -EIO;
+	if (r != 0)
+		return r;
+	r = parse_header(platform_header, buf, PLATFORM_HEADER_SIZE);
 	if (r != 0) {
 		printf("platform_header corrupt: %d\n", r);
-		goto exit;
+		return r;
 	}
 
-	uint8_t* dram_buf = malloc(platform_header->ddrc_blob_size);
-	if (dram_buf == NULL) {
-		r = -ENOMEM;
-		goto exit;
+	/* Read rest of platform data into RAM */
+	if (platform_header->total_size
+			< (PLATFORM_HEADER_SIZE + CONFIG_CSF_SIZE + IVT_TOTAL_LENGTH)) {
+		printf("platform_header total_size too small: %d\n", platform_header->total_size);
+		return -EBADF;
+	}
+	r = mtd_read(platform, PLATFORM_HEADER_SIZE, platform_header->total_size - PLATFORM_HEADER_SIZE,
+					&retlen, buf + PLATFORM_HEADER_SIZE);
+	if (r == 0 && retlen != platform_header->total_size - PLATFORM_HEADER_SIZE)
+		r = -EIO;
+	if (r != 0)
+		return r;
+
+	/* HAB signature verification */
+	r = imx_hab_authenticate_image(PLATFORM_HEADER_LOADADDR, platform_header->total_size,
+									PLATFORM_HEADER_IVT_OFFSET);
+	if (r != 0) {
+		printf("platform_header authentication failed\n");
+		return -EBADF;
 	}
 
-	r = mtd_read(platform, platform_header->ddrc_blob_offset,
-					platform_header->ddrc_blob_size, &retlen, dram_buf);
-	if (r != 0 || retlen != platform_header->ddrc_blob_size)
-		goto exit;
 
+	/* DDR blob verification and parsing */
 	const uint32_t crc32_init = crc32(0L, Z_NULL, 0);
-	const uint32_t crc32_calc = crc32(crc32_init, dram_buf, platform_header->ddrc_blob_size);
+	const uint32_t crc32_calc = crc32(crc32_init, buf + platform_header->ddrc_blob_offset, platform_header->ddrc_blob_size);
 	if (platform_header->ddrc_blob_crc32 != crc32_calc) {
 		printf("dram_timing_info corrupt: crc32 mismatch\n");
-		r = -EINVAL;
-		goto exit;
+		return -EBADF;
 	}
 
-	r = parse_dram_timing_info(dram_timing_info, dram_buf, platform_header->ddrc_blob_size);
+	r = parse_dram_timing_info(dram_timing_info, buf + platform_header->ddrc_blob_offset, platform_header->ddrc_blob_size);
 	if (r != 0) {
 		printf("dram_timing_info corrupt: %d\n", r);
-		goto exit;
+		return r;
 	}
 
-	r = 0;
-exit:
-	if (header_buf != NULL)
-		free(header_buf);
-	if (dram_buf != NULL)
-		free(dram_buf);
-	return r;
+	return 0;
 }
 
 void board_init_f(ulong dummy)
