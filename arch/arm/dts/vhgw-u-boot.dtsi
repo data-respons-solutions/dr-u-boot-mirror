@@ -7,7 +7,7 @@
 	wdt-reboot {
 		compatible = "wdt-reboot";
 		wdt = <&wdog1>;
-		u-boot,dm-spl;
+		bootph-pre-ram;
 	};
 
 	binman: binman {
@@ -61,7 +61,6 @@
 			filename = "u-boot.itb";
 			fit {
 				description = "Configuration to load ATF before U-Boot";
-				fit,external-offset = <CONFIG_FIT_EXTERNAL_OFFSET>;
 				fit,fdt-list = "of-list";
 				#address-cells = <1>;
 				images {
@@ -131,62 +130,62 @@
 };
 
 &i2c1 {
-	u-boot,dm-spl;
+	bootph-pre-ram;
 };
 
 &ecspi1 {
-	u-boot,dm-spl;
+	bootph-pre-ram;
 };
 
 &flash0 {
-	u-boot,dm-spl;
+	bootph-pre-ram;
 	partitions {
-		u-boot,dm-spl;
+		bootph-pre-ram;
 		platform@3E0000 {
-			u-boot,dm-spl;
+			bootph-pre-ram;
 		};
 		u-boot@40000 {
-			u-boot,dm-spl;
+			bootph-pre-ram;
 			read-only;
 		};
 		u-boot-second@230000 {
-			u-boot,dm-spl;
+			bootph-pre-ram;
 			read-only;
 		};
 	};
 };
 
 &pinctrl_ecspi1 {
-	u-boot,dm-spl;
+	bootph-pre-ram;
 };
 
 &{/soc@0/bus@30800000/i2c@30a20000/bd71850@4b} {
-	u-boot,dm-spl;
+	bootph-pre-ram;
 };
 
 &{/soc@0/bus@30800000/i2c@30a20000/bd71850@4b/regulators} {
-	u-boot,dm-spl;
+	bootph-pre-ram;
 };
 
 &pinctrl_i2c1 {
-	u-boot,dm-spl;
+	bootph-pre-ram;
 };
 
 &pinctrl_pmic {
-	u-boot,dm-spl;
+	bootph-pre-ram;
 };
 
 &{/soc@0} {
 	u-boot,dm-pre-reloc;
-	u-boot,dm-spl;
+	bootph-pre-ram;
 };
 
 &spba1 {
-	u-boot,dm-spl;
+	bootph-pre-ram;
 };
 
 &clk {
-	u-boot,dm-spl;
+	bootph-pre-ram;
 	u-boot,dm-pre-reloc;
 	/delete-property/ assigned-clocks;
 	/delete-property/ assigned-clock-parents;
@@ -194,95 +193,95 @@
 };
 
 &osc_24m {
-	u-boot,dm-spl;
+	bootph-pre-ram;
 	u-boot,dm-pre-reloc;
 };
 
 &aips1 {
-	u-boot,dm-spl;
+	bootph-pre-ram;
 	u-boot,dm-pre-reloc;
 };
 
 &aips2 {
-	u-boot,dm-spl;
+	bootph-pre-ram;
 };
 
 &aips3 {
-	u-boot,dm-spl;
+	bootph-pre-ram;
 };
 
 &iomuxc {
-	u-boot,dm-spl;
+	bootph-pre-ram;
 };
 
 &pinctrl_uart2 {
-	u-boot,dm-spl;
+	bootph-pre-ram;
 };
 
 &pinctrl_usdhc3 {
-	u-boot,dm-spl;
+	bootph-pre-ram;
 };
 
 &pinctrl_wdog {
-	u-boot,dm-spl;
+	bootph-pre-ram;
 };
 
 &gpio1 {
-	u-boot,dm-spl;
+	bootph-pre-ram;
 };
 
 &gpio2 {
-	u-boot,dm-spl;
+	bootph-pre-ram;
 };
 
 &gpio3 {
-	u-boot,dm-spl;
+	bootph-pre-ram;
 };
 
 &gpio4 {
-	u-boot,dm-spl;
+	bootph-pre-ram;
 };
 
 &gpio5 {
-	u-boot,dm-spl;
+	bootph-pre-ram;
 };
 
 &uart2 {
-	u-boot,dm-spl;
+	bootph-pre-ram;
 };
 
 &crypto {
-	u-boot,dm-spl;
+	bootph-pre-ram;
 };
 
 &sec_jr0 {
-	u-boot,dm-spl;
+	bootph-pre-ram;
 };
 
 &sec_jr1 {
-	u-boot,dm-spl;
+	bootph-pre-ram;
 };
 
 &sec_jr2 {
-	u-boot,dm-spl;
+	bootph-pre-ram;
 };
 
 &usdhc1 {
-	u-boot,dm-spl;
+	bootph-pre-ram;
 };
 
 &usdhc2 {
-	u-boot,dm-spl;
+	bootph-pre-ram;
 	sd-uhs-sdr104;
 	sd-uhs-ddr50;
 };
 
 &usdhc3 {
-	u-boot,dm-spl;
+	bootph-pre-ram;
 	mmc-hs400-1_8v;
 	mmc-hs400-enhanced-strobe;
 };
 
 &wdog1 {
-	u-boot,dm-spl;
+	bootph-pre-ram;
 };
