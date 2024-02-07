@@ -17,11 +17,9 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
-#define BLOBLIST_DATARESPONS_PLATFORM 0xc001
-
 int board_phys_sdram_size(phys_size_t *size)
 {
-	struct platform_header* platform_header = bloblist_find(BLOBLIST_DATARESPONS_PLATFORM,
+	struct platform_header* platform_header = bloblist_find(CONFIG_BLOBLIST_DR_PLATFORM,
 												sizeof(struct platform_header));
 	if (size == NULL)
 		return -EINVAL;

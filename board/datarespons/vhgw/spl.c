@@ -32,8 +32,6 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
-#define CONFIG_DR_NVRAM_PLATFORM_OFFSET 0x3E0000
-#define BLOBLIST_DATARESPONS_PLATFORM 0xc001
 #define SRC_GPR10_PERSIST_SECONDARY_BOOT BIT(30)
 #define PLATFORM_HEADER_LOADADDR 0x961000
 #define PLATFORM_HEADER_IVT_OFFSET 0x400
@@ -158,7 +156,7 @@ void spl_board_init(void)
 		printf("Failed to find clock node. Check device tree\n");
 
 	/* Store platform header in dram */
-	void* pheader = bloblist_add(BLOBLIST_DATARESPONS_PLATFORM, sizeof(struct platform_header), 8);
+	void* pheader = bloblist_add(CONFIG_BLOBLIST_DR_PLATFORM, sizeof(struct platform_header), 8);
 	if (pheader == NULL) {
 		printf("platform header blob registration failed\n");
 		hang();
