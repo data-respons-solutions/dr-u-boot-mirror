@@ -59,6 +59,7 @@
 		};
 		itb {
 			filename = "u-boot.itb";
+			align-size = <4096>;
 			fit {
 				description = "Configuration to load ATF before U-Boot";
 				fit,fdt-list = "of-list";
