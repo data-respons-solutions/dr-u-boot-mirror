@@ -33,8 +33,6 @@
 DECLARE_GLOBAL_DATA_PTR;
 
 #define SRC_GPR10_PERSIST_SECONDARY_BOOT BIT(30)
-#define PLATFORM_HEADER_LOADADDR 0x961000
-#define PLATFORM_HEADER_IVT_OFFSET 0x400
 
 struct platform_header platform_header;
 struct dram_timing_info dram_timing_info;
@@ -211,7 +209,7 @@ static int read_platform_header(struct platform_header* platform_header, struct 
 	struct mtd_info* platform = get_mtd_by_partname("platform");
 	if (platform == NULL)
 		return -ENODEV;
-	u8 *buf = (u8*) PLATFORM_HEADER_LOADADDR;
+	u8 *buf = (u8*) CONFIG_DR_PLATFORM_LOADADDR;
 
 	/* Read and parse header */
 	r = mtd_read(platform, 0, PLATFORM_HEADER_SIZE, &retlen, buf);
@@ -239,8 +237,8 @@ static int read_platform_header(struct platform_header* platform_header, struct 
 		return r;
 
 	/* HAB signature verification */
-	r = imx_hab_authenticate_image(PLATFORM_HEADER_LOADADDR, platform_header->total_size,
-									PLATFORM_HEADER_IVT_OFFSET);
+	r = imx_hab_authenticate_image(CONFIG_DR_PLATFORM_LOADADDR, platform_header->total_size,
+									CONFIG_DR_PLATFORM_IVT);
 	if (r != 0) {
 		printf("platform_header authentication failed\n");
 		return -EBADF;
