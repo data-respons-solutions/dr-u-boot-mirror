@@ -173,6 +173,24 @@
 	};
 };
 
+&i2c3 {
+	clock-frequency = <100000>;
+	pinctrl-names = "default", "gpio";
+	pinctrl-0 = <&pinctrl_i2c3>;
+	pinctrl-1 = <&pinctrl_i2c3_gpio>;
+	scl-gpios = <&gpio5 18 GPIO_ACTIVE_HIGH>;
+	sda-gpios = <&gpio5 19 GPIO_ACTIVE_HIGH>;
+	status = "okay";
+
+	usb_hub: usb2512bi@2c {
+		reg = <0x2c>;
+		compatible = "microchip,usb2512bi";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_hub>;
+		reset-gpios = <&gpio5 2 GPIO_ACTIVE_LOW>;
+	};
+};
+
 &ecspi1 {
 	cs-gpios = <&gpio5 9 GPIO_ACTIVE_LOW>;
 	pinctrl-names = "default";
@@ -306,6 +324,25 @@
 		>;
 	};
 
+	pinctrl_i2c3: i2c3grp {
+		fsl,pins = <
+			MX8MN_IOMUXC_I2C3_SCL_I2C3_SCL		0x400001c3 /* I2C3_SCL */
+			MX8MN_IOMUXC_I2C3_SDA_I2C3_SDA		0x400001c3 /* I2C3_SDA */
+		>;
+	};
+
+	pinctrl_i2c3_gpio: i2c3gpiogrp {
+		fsl,pins = <
+			MX8MN_IOMUXC_I2C3_SCL_GPIO5_IO18	0x400001c3 /* I2C3_SCL */
+			MX8MN_IOMUXC_I2C3_SDA_GPIO5_IO19	0x400001c3 /* I2C3_SDA */
+		>;
+	};
+
+	pinctrl_hub: hubgrp {
+		fsl,pins = <
+			MX8MN_IOMUXC_SAI3_MCLK_GPIO5_IO2	0x0 /* USB_HUB1_nRESET */
+		>;
+	};
 
 	pinctrl_uart2: uart2grp {
 		fsl,pins = <
