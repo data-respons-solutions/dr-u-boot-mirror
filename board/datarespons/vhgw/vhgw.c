@@ -13,6 +13,7 @@
 #include <bloblist.h>
 #include <fdt_support.h>
 #include <mapmem.h>
+#include <dm/uclass.h>
 #include <../common/platform_header.h>
 
 DECLARE_GLOBAL_DATA_PTR;
@@ -47,6 +48,13 @@ int power_init_board(void)
 
 int board_init(void)
 {
+	struct udevice *dev = NULL;
+	int r = 0;
+
+	/* Instantiate usb hub */
+	r = uclass_get_device_by_name(UCLASS_MISC, "usb2512bi@2c", &dev);
+	if (r < 0)
+		printf("Failed enabling USB hub [%d]\n", r);
 	return 0;
 }
 
