@@ -142,14 +142,14 @@
 	bootph-pre-ram;
 	partitions {
 		bootph-pre-ram;
-		platform@3E0000 {
+		platform@1D0000 {
 			bootph-pre-ram;
 		};
 		u-boot@40000 {
 			bootph-pre-ram;
 			read-only;
 		};
-		u-boot-second@230000 {
+		u-boot-second@240000 {
 			bootph-pre-ram;
 			read-only;
 		};

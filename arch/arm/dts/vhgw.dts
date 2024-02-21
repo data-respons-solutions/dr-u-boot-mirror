@@ -219,40 +219,40 @@
 				reg = <0x040000 0x190000>;
 			};
 
-			system_a@1D0000 {
-				label = "system_a";
+			platform@1D0000 {
+				label = "platform";
 				reg = <0x1D0000 0x010000>;
+				read-only;
 			};
 
-			system_b@1E0000 {
-				label = "system_b";
+			system_a@1E0000 {
+				label = "system_a";
 				reg = <0x1E0000 0x010000>;
 			};
 
-			spl-second@1F0000 {
+			system_b@1F0000 {
+				label = "system_b";
+				reg = <0x1F0000 0x010000>;
+			};
+
+			spl-second@200000 {
 				label = "spl-second";
-				reg = <0x1F0000 0x040000>;
+				reg = <0x200000 0x040000>;
 			};
 
-			u-boot-second@230000 {
+			u-boot-second@240000 {
 				label = "u-boot-second";
-				reg = <0x230000 0x190000>;
+				reg = <0x240000 0x190000>;
 			};
 
-			user_a@3C0000 {
+			user_a@3D0000 {
 				label = "user_a";
-				reg = <0x3C0000 0x010000>;
-			};
-
-			user_b@3D0000 {
-				label = "user_b";
 				reg = <0x3D0000 0x010000>;
 			};
 
-			platform@3E0000 {
-				label = "platform";
+			user_b@3E0000 {
+				label = "user_b";
 				reg = <0x3E0000 0x010000>;
-				read-only;
 			};
 		};
 	};
