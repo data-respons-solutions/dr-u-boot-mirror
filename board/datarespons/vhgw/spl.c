@@ -32,26 +32,11 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
+/* Defined in arch/arm/mach-imx/imx8m/soc.c */
+int imx8m_detect_secondary_image_boot(void);
+
 struct platform_header platform_header;
 struct dram_timing_info dram_timing_info;
-
-/* Return 0 if primary else secondary */
-static int secondary_image_boot(void)
-{
-	/* AN12853 (mSCALE):
-	 * 0x9e0 contains base address of rom log which
-	 * consists of 128 entries.
-	 *
-	 * MSB of each entry is event id and 0x51 is secondary image boot */
-	const u32* rom_log_addr = (u32*) 0x9e0;
-	const u32* rom_log = (u32 *)(uintptr_t)(*rom_log_addr);
-	const int rom_log_entries = 128;
-	for (int i = 0; i < rom_log_entries; ++i) {
-		if ((rom_log[i] >> 24) == 0x51)
-			return 1;
-	}
-	return 0;
-}
 
 int spl_board_boot_device(enum boot_device boot_dev_spl)
 {
@@ -104,7 +89,7 @@ static int spl_mtd_load_image(struct spl_image_info *spl_image,
 	int r = 0;
 	char* partnames[] = {"u-boot", "u-boot-second"};
 
-	if (secondary_image_boot() == 1) {
+	if (imx8m_detect_secondary_image_boot() == 1) {
 		/* Secondary boot, swap partition search order */
 		char* tmp = partnames[0];
 		partnames[0] = partnames[1];
